@@ -1,0 +1,5552 @@
+# Riverpod — LLM Documentation
+
+> Auto-generated from the Riverpod documentation source.
+> Use this file as context when asking an LLM about Riverpod.
+> Source: https://riverpod.dev | https://github.com/rrousselGit/riverpod
+
+---
+
+# Introduction
+
+## Getting started
+
+## Try Riverpod online
+
+To get a feel of Riverpod, try it online on [Dartpad](https://dartpad.dev/?null_safety=true&id=ef06ab3ce0b822e6cc5db0575248e6e2)
+or on [Zapp](https://zapp.run/new):
+
+## Installing the package
+
+Riverpod comes as a main "riverpod" package that’s self-sufficient, complemented by optional packages for using code generation (About Code Generation) and hooks (About Hooks).
+
+:::caution
+For the sake of being compatible with the latest [json_serializable](https://pub.dev/packages/json_serializable) package, some Riverpod packages
+are currently only compatible with Flutter's beta channel or later.
+
+If `pub get` is failing due to version solving issues, consider switching to the beta channel by running:
+
+```sh
+flutter channel beta
+```
+
+Or consider downgrading Riverpod to `<=3.1.0`.
+:::
+
+Once you know what package(s) you want to install, proceed to add the dependency to your app in a single line like this:
+
+_[code snippet]_
+
+_[code snippet]_
+
+Alternatively, you can manually add the dependency to your app from within your `pubspec.yaml`:
+
+_[code snippet]_
+Then, install packages with `flutter pub get`.
+
+_[code snippet]_
+Then, install packages with `dart pub get`.
+
+:::info
+If using code-generation, you can now run the code-generator with:
+```sh
+dart run build_runner watch -d
+```
+:::
+
+That's it. You've added [Riverpod] to your app!
+
+## Enabling riverpod_lint
+
+Riverpod comes with an optional [riverpod_lint]
+package that provides lint rules to help you write better code, and
+provide custom refactoring options.
+
+Riverpod_lint is implemented using [analysis_server_plugin]. As such, it is installed through `analysis_options.yaml`
+
+Long story short, create an `analysis_options.yaml` next to your `pubspec.yaml` and add:
+
+```yaml title="analysis_options.yaml"
+plugins:
+  riverpod_lint: <latest version from https://pub.dev/packages/riverpod_lint>
+```
+
+You should now see warnings in your IDE if you made mistakes when using Riverpod
+in your codebase.
+
+To see the full list of warnings and refactorings, head to the [riverpod_lint] page.
+
+## Usage example: Hello world
+
+Now that we have installed [Riverpod], we can start using it.
+
+The following snippets showcase how to use our new dependency to make a "Hello world":
+
+_[code snippet]_
+Then, start the application with `flutter run`.  
+This will render "Hello world" on your device.
+
+_[code snippet]_
+Then, start the application with `dart lib/main.dart`.  
+This will print "Hello world" in the console.
+
+## Going further: Installing code snippets
+If you are using `Flutter` and `VS Code` , consider using [Flutter Riverpod Snippets](https://marketplace.visualstudio.com/items?itemName=robert-brunhage.flutter-riverpod-snippets)
+
+If you are using `Flutter` and `Android Studio` or `IntelliJ`, consider using [Riverpod Gen Shortcuts](https://plugins.jetbrains.com/plugin/30670-riverpod-gen-shortcuts) OR [Flutter Riverpod Snippets](https://plugins.jetbrains.com/plugin/14641-flutter-riverpod-snippets)
+
+**Example: Using Generator - Riverpod Stream (`riverpodStream`) **
+![riverpod-class](/img/snippets/riverpod-stream.gif)
+
+**Example: Using Generator - Riverpod Class (`riverpodClassKeepAlive`)**
+![riverpod-stream](/img/snippets/riverpod-keep-alive-class.gif)
+
+**Flutter Riverpod Snippets**
+![img](/img/snippets/greetingProvider.gif)
+
+[riverpod]: https://github.com/rrousselgit/riverpod
+[hooks_riverpod]: https://pub.dev/packages/hooks_riverpod
+[flutter_riverpod]: https://pub.dev/packages/flutter_riverpod
+[flutter_hooks]: https://github.com/rrousselGit/flutter_hooks
+[riverpod_lint]: https://pub.dev/packages/riverpod_lint
+[analysis_server_plugin]: https://pub.dev/packages/analysis_server_plugin
+
+---
+
+# Core Concepts
+
+## Providers
+
+Providers are the central feature of Riverpod. If you use Riverpod, you use it for its providers.
+
+## What is a provider?
+
+Providers are essentially "memoized functions", with sugar on top.  
+What this means is, providers are functions which will return a cached value
+when called with the same parameters.
+
+The most common use-case for using providers is to perform a network request.  
+Consider a function that fetches a user from an API:
+
+```dart
+FuturefetchUser() async {
+  final response = await http.get('https://api.example.com/user/123');
+  return User.fromJson(response.body);
+}
+```
+
+One issue with this function is, if we were to try using it inside widgets,
+we'd have to cache the result ourselves ; then figure out a way to share 
+the value across all widgets that need it.
+
+That is where providers come in. Providers are wrappers around functions. 
+They will cache the result of said function and allow multiple widgets
+to access the same value:
+
+_[code snippet]_
+On top of basic caching, providers then add various features to make
+them more powerful:
+
+- **Built-in cache invalidation mechanisms**  
+  In particular, [Ref.watch](https://pub.dev/documentation/riverpod/latest/riverpod/Ref/watch.html)
+  allows you to combine caches together, automatically invalidating what is needed.
+- **Auto Dispose** <br/>
+  Providers can automatically release resources when they are no longer needed.
+- **Data-binding**  
+  Providers remove the need for a [FutureBuilder](https://api.flutter.dev/flutter/widgets/FutureBuilder-class.html)
+  or a [StreamBuilder](https://api.flutter.dev/flutter/widgets/StreamBuilder-class.html).
+- **Automatic error handling**  
+  Providers can automatically catch errors and expose them to the UI.
+- **Mocking support**  
+  For better testing and other purposes, all providers can be mocked.
+  See Overrides.
+- **Offline** <br/>
+  The result of a provider can be persisted to disk and automatically
+  reloaded when the app is restarted.
+- **Mutations** <br/>
+  Providers offer a built-in way for UIs render a spinner/error for side effects (such as form submission).
+
+Providers come 6 variants:
+
+|              | Synchronous      | Future                | Stream                 |
+| ------------ | ---------------- | --------------------- | ---------------------- |
+| Unmodifiable | [Provider]         | [FutureProvider]        | [StreamProvider]         |
+| Modifiable   | [NotifierProvider] | [AsyncNotifierProvider] | [StreamNotifierProvider] |
+
+This may seem overwhelming at first. Let's break it down.
+
+**Sync** vs **Future** vs **Stream**:  
+The columns of this table represent the built-in Dart types for functions.
+```dart
+int synchronous() => 0;
+Future<int> future() async => 0;
+Stream<int> stream() => Stream.value(0);
+```
+
+**Unmodifiable vs Modifiable**:  
+By default, providers are not modifiable by widgets. The "Notifier" variant of
+providers make them externally modifiable.  
+This is similar to a private setter ("unmodifiable" providers)
+```dart
+// _state is internally modifiable
+// but cannot be modified externally
+var _state = 0;
+int get state => _state;
+```
+VS a public setter ("modifiable" providers)
+```dart
+// Anything can modify "state"
+var state = 0;
+```
+
+:::info
+You can also view **unmodifiable** vs **modifiable** as respectively `StatelessWidget` vs `StatefulWidget` in principle.  
+
+This is not entirely accurate, as providers are not widgets and both kinds store "state".
+But the principle is similar: "One object, immutable" vs "Two objects, mutable".
+:::
+
+## Creating a provider
+
+Providers should be created as "top-level" declarations.  
+This means that they should be declared outside of any class or function.
+
+The syntax for creating a provider depends on whether it is "modifiable" or "unmodifiable",
+as per the table above.
+
+((ref) {
+      <your logic here>
+    });
+  `}
+  annotations={[
+    {
+      offset: 6,
+      length: 4,
+      label: "The provider variable",
+        description: <>
+
+This variable is what will be used to interact with our provider.  
+The variable must be final and "top-level" (global).
+
+:::note
+Do not be frightened by the global aspect of providers.
+Providers are fully immutable. Declaring a provider is no different from declaring
+a function, and providers are testable and maintainable.
+:::
+
+</>
+    },
+    {
+      offset: 13,
+      length: 12,
+      label: "The provider type",
+      description: <>
+
+Generally either [Provider], [FutureProvider] or [StreamProvider].  
+The type of provider used depends on the return value of your function.
+For example, to create a `Future`, you'll want a `FutureProvider`.
+
+`FutureProvider` is the one you'll want to use the most.
+
+:::tip
+Don't think in terms of "Which provider should I pick".
+Instead, think in terms of "What do I want to return". The provider type
+will follow naturally.
+:::
+
+</>
+    },
+    {
+      offset: 25,
+      length: 13,
+      label: "Modifiers (optional)",
+      description: <>
+
+Often, after the type of the provider you may see a "modifier".  
+Modifiers are optional, and are used to tweak the behavior of the provider
+in a way that is type-safe.
+
+There are currently two modifiers available:
+
+- `autoDispose`, which will automatically clear the cache when the provider
+  stops being used.  
+  See also Auto Dispose
+- `family`, which enables passing arguments to your provider.  
+  See also Family.
+
+</>
+    },
+    {
+      offset: 48,
+      length: 3,
+      label: "Ref",
+      description: <>
+
+An object used to interact with other providers.  
+All providers have one; either as parameter of the provider function,
+or as a property of a Notifier.
+
+</>
+    },
+    {
+      offset: 57,
+      length: 17,
+      label: "The provider function",
+      description: <>
+
+This is where we place the logic of our providers.
+This function will be called when the provider is first read.  
+Subsequent reads will not call the function again, but instead return the cached value.
+
+</>
+    },
+  ]}
+/>
+
+    }
+  `}
+  annotations={[
+    {
+      offset: 0,
+      length: 9,
+      label: "The annotation",
+      description: <>
+
+All generated providers must be annotated with `@riverpod` or `@Riverpod()`.
+This annotation can be placed on global functions or classes. Through this annotation, 
+it is possible to configure the provider.
+
+For example, we can disable "auto-dispose" (which we will see later) by writing `@Riverpod(keepAlive: true)`.
+
+</>
+    },
+    {
+      offset: 17,
+      length: 10,
+      label: "The annotated function",
+      description: <>
+
+The name of the annotated function determines how the provider
+will be interacted with.  
+For a given function `myFunction`, a `myFunctionProvider` will be generated.
+
+Annotated functions **must** specify a [Ref] as first parameter.  
+Besides that, the function can have any number of parameters, including generics.
+The function is also free to return a `Future`/`Stream` if it wishes to.
+
+This function will be called when the provider is first read.  
+Subsequent reads will not call the function again, but instead return the cached value.
+
+</>
+    },
+    {
+      offset: 28,
+      length: 7,
+      label: "Ref",
+      description: <>
+
+An object used to interact with other providers.  
+All providers have one; either as parameter of the provider function,
+or as a property of a Notifier.  
+The type of this object is determined by the name of the function/class.
+
+</>
+    },
+]}
+/>
+
+(MyNotifier.new);
+ 
+class MyNotifier extends SomeNotifier{
+  @override
+  Result build() {
+    <your logic here>
+  }
+
+  <your methods here>
+}`}
+  annotations={[
+    {
+      offset: 6,
+      length: 4,
+      label: "The provider variable",
+       description: <>
+
+This variable is what will be used to interact with our provider.  
+The variable must be final and "top-level" (global).
+
+:::note
+Do not be frightened by the global aspect of providers.
+Providers are fully immutable. Declaring a provider is no different from declaring
+a function, and providers are testable and maintainable.
+:::
+
+</>
+    },
+    {
+      offset: 13,
+      length: 20,
+      label: "The provider type",
+       description: <>
+
+Generally either [NotifierProvider], [AsyncNotifierProvider] or [StreamNotifierProvider].  
+The type of provider used depends on the return value of your function.
+For example, to create a `Future`, you'll want a `AsyncNotifierProvider`.
+
+[AsyncNotifierProvider] is the one you'll want to use the most.
+
+:::tip
+As with functional providers, don't think in terms of "Which provider should I pick".
+Create whatever state you want to create, and the provider type will follow naturally.
+:::
+
+</>
+    },
+    {
+      offset: 33,
+      length: 13,
+      label: "Modifiers (optional)",
+      description: <>
+
+Often, after the type of the provider you may see a "modifier".  
+Modifiers are optional, and are used to tweak the behavior of the provider
+in a way that is type-safe.
+
+There are currently two modifiers available:
+
+- `autoDispose`, which will automatically clear the cache when the provider
+  stops being used.  
+  See also Auto Dispose
+- `family`, which enables passing arguments to your provider.  
+  See also Family.
+
+</>
+    },
+    {
+      offset: 67,
+      length: 14,
+      label: "The Notifier's constructor",
+      description: <>
+
+The parameter of "notifier providers" is a function which is expected
+to instantiate the "notifier".  
+It generally should be a "constructor tear-off".
+
+</>
+    },
+    {
+      offset: 86,
+      length: 16,
+      label: "The Notifier",
+      description: <>
+
+If `NotifierProvider` is equivalent to `StatefulWidget`, then this part is
+the `State` class.
+
+This class is responsible for exposing ways to modify the state of the provider.  
+Public methods on this class are accessible to consumers using `ref.read(yourProvider.notifier).yourMethod()`.
+
+:::caution
+Do not put logic in the constructor of your notifier.  
+Notifiers should not have a constructor, as `ref` and other properties aren't
+yet available at that point. Instead, put your logic in the `build` method.
+
+```dart
+class MyNotifier extends ... {
+  MyNotifier() {
+    // ❌ Don't do this
+    // This will throw an exception
+    state = AsyncValue.data(42);
+  }
+
+  @override
+  Future<int> build() {
+    // ✅ Do this instead
+    state = AsyncValue.data(42);
+  }
+}
+```
+:::
+
+</>
+    },
+    {
+      offset: 111,
+      length: 12,
+      label: "The Notifier type",
+      description: <>
+
+The base class extended by your notifier should match that of the provider + "family", if used.
+Some examples would be:
+
+- <span style={{ color: colors[0] }}>Notifier</span>Provider -> <span style={{ color: colors[0] }}>Notifier</span>
+- <span style={{ color: colors[0] }}>AsyncNotifier</span>Provider -> <span style={{ color: colors[0] }}>AsyncNotifier</span>
+- <span style={{ color: colors[0] }}>StreamNotifier</span>Provider -> <span style={{ color: colors[0] }}>StreamNotifier</span>
+
+</>
+    },
+    {
+      offset: 136,
+      length: 54,
+      label: "The build method",
+      description: <>
+
+All notifiers must override the `build` method.  
+This method is equivalent to the place where you would normally put your
+logic in a non-notifier provider.
+
+This method should not be called directly.
+
+</>
+    },
+]}
+/>
+
+  }
+
+  <your methods here>
+}`}
+  annotations={[
+    {
+      offset: 0,
+      length: 9,
+      label: "The annotation",
+      description: <>
+
+All providers must be annotated with `@riverpod` or `@Riverpod()`.
+This annotation can be placed on global functions or classes.  
+Through this annotation, it is possible to configure the provider.
+
+For example, we can disable "auto-dispose" (which we will see later) by writing `@Riverpod(keepAlive: true)`.
+
+</>
+    },
+    {
+      offset: 10,
+      length: 16,
+      label: "The Notifier",
+       description: <>
+
+When a `@riverpod` annotation is placed on a class, that class is called
+a "Notifier".  
+The class must extend `_$NotifierName`, where `NotifierName` is the class name.
+
+Notifiers are responsible for exposing ways to modify the state of the provider.  
+Public methods on this class are accessible to consumers using `ref.read(yourProvider.notifier).yourMethod()`.
+
+:::caution
+Do not put logic in the constructor of your notifier.  
+Notifiers should not have a constructor, as `ref` and other properties aren't
+yet available at that point. Instead, put your logic in the `build` method.
+
+```dart
+class MyNotifier extends ... {
+  MyNotifier() {
+    // ❌ Don't do this
+    // This will throw an exception
+    state = AsyncValue.data(42);
+  }
+
+  @override
+  Future<int> build() {
+    // ✅ Do this instead
+    state = AsyncValue.data(42);
+  }
+}
+```
+:::
+
+</>
+    },
+    {
+      offset: 52,
+      length: 54,
+      label: "The build method",
+      description: <>
+
+All notifiers must override the `build` method.  
+This method is equivalent to the place where you would normally put your
+logic in a non-notifier provider.
+
+This method should not be called directly.
+
+</>
+    },
+]}
+/>
+
+:::info
+You can declare as many providers as you want without limitations.
+As opposed to when using `package:provider`, Riverpod allows creating multiple
+providers exposing a state of the same "type":
+
+_[code snippet]_
+The fact that both providers create a `String` does not cause any problem.
+:::
+
+## Using providers
+
+Providers are similar to widgets in that, on their own, they do nothing.  
+Similarly to how widgets are a description of the UI, providers are a description
+of the state.  
+Surprisingly, a provider is fully stateless, and could be instantiated as `const`
+if not for the fact that this would make the syntax a bit more verbose.
+
+To use a provider, you need a separate object: [ProviderContainer]. 
+See Containers for more information.
+
+Long story short, before you can use a provider, wrap your Flutter applications
+in a [ProviderScope]:
+
+```dart
+void main() {
+  runApp(ProviderScope(child: MyApp()));
+}
+```
+
+Once that is done, you will need to obtain a [Ref] to interact with your providers. 
+See Refs for information about those.
+
+In short, there are two ways to obtain a [Ref]:
+- Providers naturally get access to one.  
+  This is the first parameter of the provider function, or the `ref` property of a Notifier.
+  This enables providers to communicate with each other.
+- The Widget tree will need special kind of widgets, called Consumers.
+  Those widgets bridge the gap between the widget tree and the provider tree, by giving you a [WidgetRef].
+
+As example, consider a `helloWorldProvider` that returns a simple string.
+You could use it inside widgets like this:
+
+```dart
+class Example extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        // Obtain the value of the provider
+        final helloWorld = ref.watch(helloWorldProvider);
+
+        // Use the value in the UI
+        return Text(helloWorld);
+      },
+    );
+  }
+}
+```
+
+[provider]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Provider-class.html
+[futureprovider]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/FutureProvider-class.html
+[streamprovider]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/StreamProvider-class.html
+[notifierprovider]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/NotifierProvider-class.html
+[asyncnotifierprovider]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/AsyncNotifierProvider-class.html
+[streamnotifierprovider]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/StreamNotifierProvider-class.html
+[ref]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref-class.html
+[widgetref]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/WidgetRef-class.html
+[providerscope]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderScope-class.html
+[providercontainer]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderContainer-class.html
+
+---
+
+## Refs
+
+Refs are the primary way to interact with Providers.  
+Refs are fairly similar to the `BuildContext` in Flutter, but for providers instead of widgets.
+A non-exhaustive list of things you can do with a ref:
+- read/observe the state of a provider
+- check if a provider currently is loaded or
+- reset the state of a provider
+
+On top of that, [Ref] also enables a provider to observe life-cycles about its own state.
+Think "initState" and "dispose", but for providers. This includes methods such as:
+- [onDispose]
+- [onCancel]
+
+- etc.
+
+## How to obtain a [Ref]
+
+Obtaining a [Ref] depends on where you are in your app.
+
+Providers naturally have access to a Ref. You can find it as parameter of 
+the initializer function, or as a property of Notifier classes.
+
+((ref) {
+    // ref is available here
+    ...
+  });
+  
+  final myNotifierProvider = NotifierProvider(MyNotifier.new);
+  
+  class MyNotifier extends Notifier<int> {
+    @override
+    int build() {
+      // this.ref is available anywhere inside notifiers
+      ref.watch(someProvider);
+      ...
+    }
+  }
+  `}
+/>
+
+To obtain a [Ref] inside widgets, you need Consumers.
+
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    // ref is available here
+    final value = ref.watch(myProvider);
+    return Text('$value');
+  },
+);
+```
+
+**I am never inside a widget, nor a provider. How do I get a Ref then?**  
+If you are neither inside widgets nor providers, chances are whatever you are using
+is still loosely connected to a widget/provider.
+
+In that case, simply pass the ref you obtained from your widget/provider to your function/object of choice:
+
+```dart
+void myFunction(WidgetRef ref) {
+  // You can pass the ref around!
+}
+
+...
+
+Consumer(
+  builder: (context, ref, _) {
+    return ElevatedButton(
+      onPressed: () => myFunction(ref), // Pass the ref to your function
+      child: Text('Click me'),
+    );
+  },
+);
+```
+
+## Using Refs to interact with providers
+
+Interactions with providers generally fall under two categories:
+- Listening to a provider's state
+- Modifying a provider's state 
+  (e.g., resetting it, updating it, etc.)
+
+### Listening to a provider's state
+
+Riverpod offers two ways to listen to a provider's state:
+- [Ref.watch] - This is a "declarative" way of listening to providers.  
+  It is the most common way to listen to providers, and should be your go to choice.
+- [Ref.listen] - This is a "manual" way of listening to providers.  
+  It uses a typical "addListener" style of listening. Powerful, but more complex.
+
+For the following examples, consider a provider that updates every second:
+
+state++);
+      ref.onDispose(timer.cancel);
+      return 0;
+    }
+  }
+  `}
+  raw={`
+  final tickProvider = NotifierProvider(Tick.new);
+  class Tick extends Notifier<int> {
+    @override
+    int build() {
+      final timer = Timer.periodic(Duration(seconds: 1), (_) => state++);
+      ref.onDispose(timer.cancel);
+      return 0;
+    }
+  }
+  `}
+/>
+
+#### Ref.watch
+
+[Ref.watch] is Riverpod's defining feature. It enables combining providers together seamlessly,
+and easily have your UI update when a provider's state changes.
+
+Using [Ref.watch] is similar to using an `InheritedWidget` in Flutter.
+In Flutter, when you call `Theme.of(context)`, your widget subscribes to the `Theme`
+and will rebuild whenever the `Theme` changes. Similarly, when you call `ref.watch(myProvider)`,
+your widget/provider subscribes to `myProvider`, and will rebuild whenever `myProvider` changes.
+
+The following code shows a Consumers that automatically updates whenever our `Tick` provider updates:
+
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    final tick = ref.watch(tickProvider);
+    return Text('Tick: $tick');
+  },
+);
+```
+
+The most interesting part of [Ref.watch] is that providers can use it too!  
+For example, we could create a provider that returns "is tick divisible by 4?":
+
+((ref) {
+    final tick = ref.watch(tickProvider);
+    return tick % 4 == 0;
+  });
+  `}
+/>
+
+Then, we could listen to this new provider in our UI instead:
+
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    final isDivisibleBy4 = ref.watch(isDivisibleBy4Provider);
+    return Text('Can tick be divided by 4? ${isDivisibleBy4}');
+  },
+);
+```
+
+Now, instead of updating every second, our UI will only update
+when the boolean value changes.  
+
+#### Ref.listen
+
+[Ref.listen] is a more manual way of listening to providers.
+It is similar to the `addListener` method of `ChangeNotifier`, or the `Stream.listen` method.
+
+This method is useful when you want to perform a side-effect when a provider's state changes, such as
+- Showing a dialog
+- Navigating to a new screen
+- Logging a message
+- etc.
+
+((ref) {
+    ref.listen(tickProvider, (previous, next) {
+      // This is called whenever tickProvider changes
+      print('Tick changed from $previous to $next');
+    });
+  
+    return 0;
+  });
+  `}
+/>
+
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    ref.listen(tickProvider, (previous, next) {
+      // This is called whenever tickProvider changes
+      print('Tick changed from $previous to $next');
+    });
+  
+    return Text('Listening to tick changes');
+  },
+);
+```
+
+:::note
+It is safe to use [WidgetRef.listen] inside the `build` method of a widget. This is how the
+method is designed to be used.  
+If you want to listen to providers outside of `build` (such as `State.initState`), use [WidgetRef.listenManual] instead.
+:::
+
+### Resetting a provider's state
+
+Using [Ref.invalidate], you can reset a provider's state.  
+This will tell Riverpod to discard the current state and re-evaluate the provider the next time it is read.
+
+The following example will reset the tick to `0`:
+
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    return ElevatedButton(
+      onPressed: () {
+        // Reset the tick provider
+        // This will restart the tick from 0
+        ref.invalidate(tickProvider);
+      },
+      child: Text('Reset Tick'),
+    );
+  },
+);
+```
+
+:::tip
+If you need to obtain the new state right after resetting it, you can call [Ref.read]:
+
+```dart
+ref.invalidate(tickProvider);
+final newTick = ref.read(tickProvider);
+```
+Alternatively, you can use [Ref.refresh] to reset the provider and read its new state in one go:
+```dart
+final newTick = ref.refresh(tickProvider);
+```
+
+Both codes are strictly equivalent. [Ref.refresh] is syntax sugar for [Ref.invalidate] followed by [Ref.read].
+:::
+
+### Interacting with the provider's state inside user interactions
+
+A last use-case is to interact with a provider's state inside button clicks.
+In this scenario, we do not want to "listen" to the state. For this case, [Ref.read] exists.
+
+You can safely call [Ref.read] button clicks to perform work. The following example
+will print the current tick value when the button is clicked:
+
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    return ElevatedButton(
+      onPressed: () {
+        // Read the current tick value
+        final tick = ref.read(tickProvider);
+        print('Current tick: $tick');
+      },
+      child: Text('Print Tick'),
+    );
+  },
+);
+```
+
+:::danger
+Do not use [Ref.read] as a mean to "optimize" your code by avoiding [Ref.watch].
+This will make your code more brittle, as changes in your provider's behavior could cause your
+UI to be out of sync with the provider's state.
+
+Either use [Ref.watch] anyway (as the difference is negligible) or use [select]:
+```dart
+Consumer(
+  builder: (context, ref, _) {
+    // ❌ Don't use "read" as a mean to ignore changes
+    final tick = ref.read(tickProvider);
+
+    // ✅ Use "watch" to listen to changes.
+    // This shouldn't be a bottle-neck in your apps. Do not over-optimize.
+    final tick = ref.watch(tickProvider);
+
+    // ✅ Use "select" to only listen to the specific part of the state you care about
+    final isEven = ref.watch(
+      tickProvider.select((tick) => tick.isEven),
+    );
+
+    ...
+  },
+);
+```
+:::
+
+### Listening to life-cycle events
+
+A provider-specific feature of [Ref] is the ability to listen to life-cycle events.
+These events are similar to the `initState`, `dispose`, and other life-cycle methods in Flutter widgets.
+
+Life-cycles listeners are registered using an "addListener" style API.
+Listeners are methods with a name that starts with `on`, such as [onDispose] or [onCancel].
+
+((ref) {
+    ref.onDispose(() {
+      // This is called when the provider is disposed
+      print('Counter provider is being disposed');
+    });
+    
+    return 0;
+  });
+  `}
+/>
+
+:::tip
+You do not need to "unregister" these listeners.  
+Riverpod automatically cleans them up when the provider is reset.
+
+Although if you wish to unregister them manually, you can do so by using the return
+value of the listener method.
+
+```dart
+final unregister = ref.onDispose(() {
+  print('This will never be called');
+});
+
+// This will unregister the "onDispose" listener
+unregister();
+```
+:::
+
+[Ref]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref-class.html
+[Ref.watch]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/watch.html
+[Ref.listen]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/listen.html
+[Ref.invalidate]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/invalidate.html
+[Ref.refresh]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/refresh.html
+[Ref.read]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/read.html
+[WidgetRef.listen]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/WidgetRef/listen.html
+[WidgetRef.listenManual]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/WidgetRef/listenManual.html
+[WidgetRef]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/WidgetRef-class.html
+[onDispose]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/onDispose.html
+[onCancel]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/onCancel.html
+[select]: https://pub.dev/documentation/hooks_riverpod/latest/misc/ProviderListenable/select.html
+[ProviderSubscription]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderSubscription-class.html
+
+---
+
+## Consumers
+
+A "Consumer" is a type of widget that bridges the gap between the Widget tree and the Provider tree.
+
+The only real difference between a Consumer and typical widgets is that Consumers
+get access to a [Ref]. This enables them to read providers and listen to their changes.
+See Refs for more information.
+
+Consumers come in a few different flavors, mostly for personal preference. You will find:
+- [Consumer], a "builder" widget (similar to [FutureBuilder](https://api.flutter.dev/flutter/widgets/FutureBuilder-class.html)).
+  It allows widgets to interact with providers without having to subclass something other than `StatelessWidget` or `StatefulWidget`.
+  ```dart
+  // We subclass StatelessWidget as usual
+  class MyWidget extends StatelessWidget {
+    @override
+    Widget build(BuildContext context) {
+      // A FutureBuilder-like widget
+      return Consumer(
+        // The "builder" callback gives us a "ref" parameter
+        builder: (context, ref, _) {
+          // We can use that "ref" to listen to providers
+          final value = ref.watch(myProvider);
+          return Text(value.toString());
+        },
+      );
+    }
+  }
+  ```
+- [ConsumerWidget], a variant of `StatelessWidget` widget.
+  Instead of subclassing `StatelessWidget`, you subclass `ConsumerWidget`. It will behave the same,
+  besides the fact that `build` receives an extra [WidgetRef] parameter.
+  ```dart
+  // We subclass ConsumerWidget instead of StatelessWidget
+  class MyWidget extends ConsumerWidget {
+    // "build" receives an extra parameter
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      // We can use that "ref" to listen to providers
+      final value = ref.watch(myProvider);
+      return Text(value.toString());
+    }
+  }
+  ```
+- [ConsumerStatefulWidget], a variant of `StatefulWidget` widget.  
+  Again, instead of subclassing `StatefulWidget`, you subclass `ConsumerStatefulWidget`.
+  And instead of `State`, you subclass [ConsumerState].
+  The unique part is that [ConsumerState] has a `ref` property.
+  ```dart
+  // We subclass ConsumerStatefulWidget instead of StatefulWidget
+  class MyWidget extends ConsumerStatefulWidget {
+    @override
+    ConsumerStatecreateState() => _MyWidgetState();
+  }
+  // We subclass ConsumerState instead of State
+  class _MyWidgetState extends ConsumerState{
+    // A "this.ref" property is available
+    @override
+    Widget build(BuildContext context) {
+      // We can use that "ref" to listen to providers
+      final value = ref.watch(myProvider);
+      return Text(value.toString());
+    }
+  }
+  ```
+
+Alternatively, you will find extra consumers in the [hooks_riverpod](https://pub.dev/packages/hooks_riverpod) package.
+Those combine Riverpod consumers with [flutter_hooks](https://pub.dev/packages/flutter_hooks).
+If you don't care about hooks, you can ignore them.
+
+### Which one to use?
+
+The choice of which consumer to use is mostly a matter of personal preference.
+You could use [Consumer] for everything. It is a slightly more verbose option than the others.
+But this is a reasonable price to pay if you do not like how Riverpod hijacks `StatelessWidget` and `StatefulWidget`.
+
+But if you do not have a strong opinion, we recommend using [ConsumerWidget] (or [ConsumerStatefulWidget] when you need a `State`).
+
+### Why can't we use `StatelessWidget` + `context.watch`?
+
+In alternative packages like [provider](https://pub.dev/packages/provider), you can use `context.watch` to listen to providers.
+This works inside any widget, as long as you have a `BuildContext`. So why isn't this the case in Riverpod?
+
+The reason is that relying purely on `BuildContext` instead of a [Ref] would prevent the implementation
+of Riverpod's Auto Dispose in a reliable way. There _are_ tricks to make
+an implementation that "mostly works" with `BuildContext`.
+The problem is that there are lots of subtle edge-cases which could silently break the auto-dispose feature.
+
+This would cause memory leaks, but that's not the real issue.  
+Automatic disposal is more importantly about stopping the execution of code that is no longer needed.
+If auto-dispose fails to dispose a provider, then that provider may continuously perform
+network requests in the background.
+
+Riverpod preferred to not compromise on reliability for the sake of a little convenience.
+
+:::note
+To alleviate the downsides of having to use [ConsumerWidget]/[ConsumerStatefulWidget] instead of `StatelessWidget`/`StatefulWidget`,
+Riverpod offers various refactors in IDEs like VSCode and Android Studio.
+
+![Refactor to Consumer](/img/intro/convert_to_class_provider.gif)
+
+To enable them in your IDE, see :::
+
+[ref]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref-class.html
+[consumer]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Consumer-class.html
+[consumerWidget]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ConsumerWidget-class.html
+[consumerStatefulWidget]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ConsumerStatefulWidget-class.html
+[consumerState]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ConsumerState-class.html
+[widgetref]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/WidgetRef-class.html
+
+---
+
+## Automatic disposal
+
+```
+
+If you're not using code-generation, you can enable it by using `isAutoDispose: true`
+when creating the provider:
+```dart
+final helloWorldProvider = Provider(
+  // Opt-in to automatic disposal
+  isAutoDispose: true,
+  (ref) => 'Hello world!',
+);
+```
+
+:::note
+Enabling/disabling automatic disposal has no impact on whether or not
+the state is destroyed when the provider is recomputed.  
+The state will always be destroyed when the provider is recomputed.
+:::
+
+:::caution
+When providers receive parameters, it is recommended to enable automatic disposal.
+That is because otherwise, one state per parameter combination will be created,
+which can lead to memory leaks.
+:::
+
+## When is automatic disposal triggered?
+
+When automatic disposal is enabled, Riverpod will track whether a provider has listeners or not.
+This happens by tracking [Ref.watch](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/watch.html)/[Ref.listen](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/listen.html)
+calls (and a few others).  
+
+When that counter reaches zero, the provider is considered "not used", and
+[Ref.onCancel](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/onCancel.html)
+is triggered. 
+At that point, Riverpod waits for one frame (cf. `await null`). If, after that frame,
+the provider is still not used, then the provider is destroyed and
+[Ref.onDispose](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/onDispose.html)
+will be triggered.
+## Reacting to state disposal
+
+In Riverpod, there are a few built-in ways for state to be destroyed:
+
+- The provider is no longer used and is in "auto dispose" mode (more on that later).
+  In this case, all associated state with the provider is destroyed.
+- The provider is recomputed, such as with `ref.watch`.
+  In that case, the previous state is disposed, and a new state is created.
+
+In both cases, you may want to execute some logic when that happens.  
+This can be achieved with `ref.onDispose`. This method enables
+registering a listener for whenever the state is destroyed.
+
+For example, you may want to use it to close any active `StreamController`:
+
+_[code snippet]_
+:::caution
+The callback of `ref.onDispose` must not trigger side-effects.
+Modifying providers inside `onDispose` could lead to unexpected behavior.
+:::
+
+:::info
+There are other useful life-cycles such as:
+
+- `ref.onCancel` which is called when the last listener of a provider is removed.
+- `ref.onResume` which is called when a new listener is added after `onCancel` was invoked.
+
+:::
+
+:::info
+You can call `ref.onDispose` as many times as you wish.
+Feel free to call it once per disposable object in your provider. This practice
+makes it easier to spot when we forget to dispose of something.
+:::
+
+## Manually forcing the destruction of a provider, using `ref.invalidate`
+
+Sometimes, you may want to force the destruction of a provider.
+This can be done by using `ref.invalidate`, which can be called from another
+provider or a widget.
+
+Using `ref.invalidate` will destroy the current provider state.
+There are then two possible outcomes:
+
+- If the provider is listened to, a new state will be created.
+- If the provider is not listened to, the provider will be fully destroyed.
+
+_[code snippet]_
+:::info
+It is possible for providers to invalidate themselves by using `ref.invalidateSelf`.
+Although in this case, this will always result in a new state being created.
+:::
+
+:::tip
+When trying to invalidate a provider which receives parameters,
+it is possible to either invalidate one specific parameter combination,
+or all parameter combinations at once:
+
+_[code snippet]_
+:::
+
+## Fine-tuned disposal with `ref.keepAlive`
+
+As mentioned above, when automatic disposal is enabled, the state is destroyed
+when the provider has no listeners for a full frame.
+
+But you may want to have more control over this behavior. For instance,
+you may want to keep the state of successful network requests,
+but not cache failed requests.
+
+This can be achieved with `ref.keepAlive`, after enabling automatic disposal.
+Using it, you can decide _when_ the state stops being automatically disposed.
+
+_[code snippet]_
+:::note
+If the provider is recomputed, automatic disposal will be re-enabled.
+
+It is also possible to use the return value of `ref.keepAlive` to
+revert to automatic disposal.
+:::
+
+## Example: keeping state alive for a specific amount of time
+
+Currently, Riverpod does not offer a built-in way to keep state alive
+for a specific amount of time.  
+But implementing such a feature is easy and reusable with the tools we've seen so far.
+
+By using a `Timer` + `ref.keepAlive`, we can keep the state alive for a specific amount of time.
+To make this logic reusable, we could implement it in an extension method:
+
+_[code snippet]_
+Then, we can use it like so:
+
+_[code snippet]_
+This logic can be tweaked to fit your needs. 
+For example, you could use `ref.onCancel`/`ref.onResume` to destroy the state
+only if a provider hasn't been listened to for a specific amount of time.
+
+---
+
+## Family
+
+One of Riverpod's most powerful feature is called "Families".  
+In short, it allows a provider to be associated with multiple independent states,
+based on a unique parameter combination.
+
+A typical use-case is to fetch data from a remote API, where the response depends
+on some parameters (such as a user ID or a search query or a page number). 
+It enables defining a single provider that can be used to fetch and cache any possible
+parameter combination.
+
+![Graph showing how family links a provider to multiple independent states](/img/concepts2/family/users.svg)
+
+:::info
+If normal providers can be assimilated to a variable, then "family" providers can be
+assimilated to a Map.
+:::
+
+## Creating a Family
+
+Defining a family is done by slightly modifying the provider definition
+to receive a parameter.
+
+For functional providers, the syntax is as follows:
+
+_[code snippet]_
+And for notifier providers, the syntax is:
+
+_[code snippet]_
+:::info
+Although not strictly required, it is highly advised to enable Auto Dispose
+when using families.
+
+This avoids memory leaks in case the parameter changes and the previous state is no longer needed.
+:::
+
+## Using a Family
+
+Providers that receive parameters see their usage slightly modified too.
+
+Long story short, you need to pass the parameters that your provider
+expects, as follows:
+
+```dart
+final user = ref.watch(userProvider('123'));
+```
+
+:::caution
+Parameters passed need to have a consistent `==`/`hashCode`.
+
+View "family" as a Map, where the parameters are the key and the provider's state is the value.
+As such, if the `==`/`hashCode` of a parameter changes, the value
+obtained will be different.
+
+Therefore code such as the following is incorrect:
+
+```dart
+// Incorrect parameter, as `[1, 2, 3] != [1, 2, 3]`
+ref.watch(myProvider([1, 2, 3]));
+```
+
+To help spot this mistake, it is recommended to use the [riverpod_lint](https://pub.dev/packages/riverpod_lint)
+and enable the [provider_parameters](https://github.com/rrousselGit/riverpod/tree/master/packages/riverpod_lint#provider_parameters)
+lint rule. Then, the previous snippet would show a warning.
+See for installation steps.
+:::
+
+You can read as many "family" providers as you want, and they will all be independent. As such,
+it is legal to do:
+
+```dart
+class Example extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user1 = ref.watch(userProvider('123'));
+    final user2 = ref.watch(userProvider('456'));
+
+    // user1 and user2 are independent.
+  }
+}
+```
+
+## Overriding families
+
+When trying to mock a provider in tests, you may want to override a family provider.  
+
+In that scenario, you have two options:
+- Override only a specific parameter combination:
+  _[code snippet]_
+- Override all parameter combinations:
+  _[code snippet]_
+
+---
+
+## Provider overrides
+
+In Riverpod, _all_ providers can be overridden to change their behavior.
+This is useful for testing, debugging, or providing different implementations in different environments,
+or even Scoping.
+
+Overriding a provider is done on Containers, using the `overrides` parameter.
+In it, you can specify a list of instructions on how to override a specific provider.
+
+Such "instruction" is created using your provider, combined with value methods named `overrideWithSomething`.  
+There are a bunch of these methods available, but all of them have their name starting with `overrideWith`.
+This includes:
+- [overrideWith](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Provider/overrideWith.html)
+- [overrideWithValue](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/FutureProvider/overrideWithValue.html)
+- [overrideWithBuild](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/StreamProvider/overrideWithBuild.html)
+
+A typical override looks like this:
+
+```dart
+void main() {
+  runApp(
+    ProviderScope(
+      overrides: [
+        // Your overrides are defined here.
+        // The following shows how to override a "counter provider"
+        // to use a different initial value.
+        counterProvider.overrideWith((ref) => 42),
+      ]
+    )
+  );
+}
+```
+
+```dart
+final container = ProviderContainer(
+  overrides: [
+    // Your overrides are defined here.
+    // The following shows how to override a "counter provider"
+    // to use a different initial value.
+    counterProvider.overrideWith((ref) => 42),
+  ]
+);
+```
+
+---
+
+## Scoping providers
+
+Scoping is the act of changing the behavior of a provider for only a small part of your application.
+
+This is useful for:
+- Page/Widget-specific customization (e.g changing the theme of your app for one specific page)
+- Performance optimization (e.g rebuilding only the item that changes in a `ListView`)
+- Avoiding having to pass parameters around (such as for Family)
+
+Scoping is achieved using Overrides, by 
+overriding a provider in Containers that are _not_ the root of your application.
+
+:::caution
+The scoping feature is highly complex and will likely be
+reworked in the future to be more ergonomic.  
+
+Thread carefully.
+:::
+
+## Defining a scoped provider
+
+By default, Riverpod will not allow you to scope a provider. You need to opt-in to this feature by
+specifying `dependencies` on the provider.
+
+The first scoped provider in your app will typically specify `dependencies: []`.  
+The following snippet defines a scoped provider that exposes the current item ID that is being displayed:
+
+_[code snippet]_
+## Listening to a scoped provider
+
+To listen to a scoped provider, use the provider as usual by obtaining Refs,
+(such as with Consumers).
+
+```dart
+final currentItemId = ref.watch(currentItemIdProvider);
+```
+
+If a provider is listening to a scoped provider, that scoped provider
+needs to be included in the `dependencies` of the provider that is listening to it:
+
+_[code snippet]_
+:::info
+Inside `dependencies`, you only need to list scoped providers.
+You do not need to list providers that are not scoped.
+:::
+
+## Setting the value of a scoped provider
+
+To set a scoped provider, you can use Overrides.
+A typical example is to specify `overrides` on [ProviderScope] like so:
+
+_[code snippet]_
+[ProviderScope]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderScope-class.html
+
+---
+
+## ProviderContainers/ProviderScopes
+
+[ProviderContainer] is _the_ central piece of Riverpod's architecture.  
+In Riverpod, [Providers](./providers.mdx) hold no state themselves. Instead,
+the state of a given provider is stored inside this container object.
+
+[ProviderScope] is a widget that creates a [ProviderContainer] and exposes it to the 
+widget tree. Hence why, when you use Riverpod, you will always see a scope at the root of apps.  
+Without it, Riverpod would be unable to store the state of providers!
+
+### Using a ProviderContainer for pure Dart applications
+
+[ProviderContainer] is a useful object when you want to use Riverpod
+in pure Dart codebases, such as command-line applications or server-side applications.
+
+You can create a [ProviderContainer] inside your `main`, and use it to read and modify providers:
+
+```dart
+void main() {
+  final container = ProviderContainer();
+
+  try {
+    final sub = container.listen(counterProvider, (previous, next) {
+      print('Counter changed from $previous to $next');
+    });
+    print('Counter starts at ${sub.read()}');
+  } finally {
+    // Dispose the container when done
+    container.dispose();
+  }
+}
+```
+
+:::note
+Inside tests, do not use [ProviderContainer] directly.
+Use [ProviderContainer.test](https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderContainer/ProviderContainer.test.html) instead.
+This will automatically dispose the container when the test ends.
+
+```dart
+test('Counter starts at 0 and can be incremented', () {
+  // No need to dispose the container when the test ends
+  final container = ProviderContainer.test();
+
+  // Use the container to test your providers
+});
+```
+:::
+
+### Using a ProviderScope for Flutter applications
+
+In Flutter applications, you shouldn't use [ProviderContainer] directly.
+Instead, you should use [ProviderScope], which is a widget equivalent of [ProviderContainer].
+
+The end-result is the same: Create a [ProviderScope] in your `main`. After that, you can
+use [Consumers](./consumers.mdx) to read and modify providers in your widgets.
+
+```dart
+void main() {
+  runApp(
+    ProviderScope(
+      child: Consumer(
+        builder: (context, ref, _) {
+          final counter = ref.watch(counterProvider);
+
+          // TODO use "counter"
+        },
+      ),
+    ),
+  );
+}
+```
+
+## Why store the state of providers inside a container?
+
+One might wonder why providers don't store their state themselves.
+If we got rid of that requirement, we could imagine a world where we could write:
+
+```dart
+print(helloWorldProvider.value); // Prints "Hello world!"
+```
+
+instead of having to write `ref.watch(helloWorldProvider)`.
+
+Riverpod does this for a few reasons, which come down the same logic: "No global state".
+
+1. Better separation of concerns.  
+  If Riverpod were to allow providers to store their own state,
+  it would imply that _anything_ could read/write to that state. This means
+  that it would be difficult to control how/when a state is modified.
+
+  Using Riverpod's architecture, state updates are centralized: All the logic
+  for modifying a provider is done in the provider itself.
+  And generally, the UI will only invoke one method on the provider's Notifier.
+
+1. Better testing.
+  By storing the state of providers inside a container, we do not have to worry about
+  resetting the application state between tests. We can simply create a new container
+  for each test, and a fresh state will be created for each provider:
+
+  ```dart
+  test('Counter starts at 0 and can be incremented', () {
+    final container = ProviderContainer.test();
+
+    expect(container.read(counterProvider), 0);
+    container.read(counterProvider.notifier).increment();
+    expect(container.read(counterProvider), 1);
+  });
+
+  test('Counter cannot go below 0', () {
+    final container = ProviderContainer.test();
+
+    expect(container.read(counterProvider), 0);
+    container.read(counterProvider.notifier).decrement();
+    expect(container.read(counterProvider), 0);
+  });
+  ```
+  Here, we can see that both tests rely on the same provider. Yet state changes
+  inside one test do not affect the other test.
+
+  Of course, the same applies when using [ProviderScope] and widget tests.
+
+1. A centralized place for configuring your application.  
+  Through [ProviderContainer] and [ProviderScope], we can configure various app-wide
+  aspects of Riverpod. For example:
+    * We can define a custom [ProviderObserver] to listen to all state changes in the app.
+      See Observers.
+    * We can override providers, either locally or globally. This
+      can be useful for testing or for applications with different environments,
+      or for development.
+      See Overrides.
+
+1. Support for Scoping.
+  By storing the state of a provider inside a container, we can have the same provider
+  resolve to a different state depending on where in the widget tree it is used.
+  This feature is quite advanced and generally discouraged, but useful for performance
+  optimizations.
+
+[ProviderContainer]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderContainer-class.html
+[ProviderScope]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderScope-class.html
+[ProviderObserver]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderObserver-class.html
+
+---
+
+## Mutations (experimental)
+
+:::caution
+Mutations are experimental, and the API may change in a breaking way without
+a major version bump.
+:::
+
+Mutations, in Riverpod, are objects which enable the user interface
+to react to state changes.
+A common use-case is displaying a loading indicator while a form is being submitted
+
+In short, mutations are to achieve effects such as this:
+![Submit progress indicator](/img/concepts2/mutations/spinner.gif)!
+
+Without mutations, you would have to store the progress of the form submission
+directly inside the state of a provider. This is not ideal as it pollutes the
+state of your provider with UI concerns ; and it involves a lot of boilerplate code
+to handle the loading state, error state, and success state.
+
+Mutations are designed to handle these concerns in a more elegant way.
+
+## Defining a mutation
+
+Mutations are instances of the [Mutation] object, stored in a final variable somewhere.
+
+```dart
+// A mutation to track the "add todo" operation.
+// The generic type is optional and can be specified to enable the UI to interact
+// with the result of the mutation.
+final addTodo = Mutation();
+```
+
+:::note
+Typically, this variable will either be global or as a `static final` variable on
+a [Notifier].
+:::
+
+## Listening to a mutation
+
+Once we've defined a mutation, we can start using it inside Consumers or Providers.  
+For this, we will need a Refs and pick a listening method of our choice
+(typically [Ref.watch]).
+
+A typical example would be:
+
+{trimSnippet(listener)}### Scoping a mutation
+
+Sometimes, you may want to have multiple instances of the same mutation.
+
+This can include things like an id, or any other parameter that makes the mutation unique.
+
+This is useful if you want to have multiple instances of the same mutation,
+such as deleting a specific item in a list
+
+Simply call the mutation with the unique key:
+
+{trimSnippet(keyed)}Sometimes, these mutations have a generic return type,
+such as if an api response may have different response types
+based on the input parameters, such as with deserialization.
+
+{trimSnippet(generic)}### Triggering a mutation
+
+So far, we've listened to the state of a mutation, but nothing actually happens yet.
+
+To trigger a mutation, we can use [Mutation.run], pass our mutation, and provide an asynchronous callback
+that updates whatever state we want. Lastly, we'll need to return a value matching the generic type of the mutation.
+
+{trimSnippet(triggering)}### The different mutation states and their meaning
+
+Mutations can be in one of the following states:
+- [MutationPending]: The mutation has started and is currently loading.
+- [MutationError]: The mutation has failed, and an error is available.
+- [MutationSuccess]: The mutation has succeeded, and the result is available.
+- [MutationIdle]: The mutation has not been called yet, or has been reset.
+
+You can switch over the different states using a `switch` statement:
+
+{trimSnippet(switching)}### After a mutation has been started once, how to reset it to its idle state?
+
+Mutations naturally reset themselves to [MutationIdle] if:
+- They have completed (either successfully or with an error).
+- All listeners have been removed (e.g. the spinner widget has been removed)
+
+This is similar to how Auto Dispose works, but for mutations.
+
+Alternatively, you can manually reset a mutation to its idle state
+by calling the [Mutation.reset] method:
+
+{trimSnippet(resetting)}[MutationPending]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/MutationPending-class.html
+[MutationError]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/MutationError-class.html
+[MutationSuccess]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/MutationSuccess-class.html
+[MutationIdle]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/MutationIdle-class.html
+[Mutation.reset]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/Mutation/reset.html
+[Mutation.run]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/Mutation/run.html
+[Mutation]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/Mutation-class.html
+[Notifier]: https://pub.dev/documentation/riverpod/latest/riverpod/Notifier-class.html
+[Ref.watch]: https://pub.dev/documentation/riverpod/latest/riverpod/Ref/watch.html
+
+---
+
+## Automatic retry
+
+In Riverpod, Providers are automatically retried when they fail.
+
+A retry is attempted when an exception is thrown during the provider's computation.
+The retry logic can be customized either on a per-provider basis or globally for all providers.
+
+By default, a provider can be retried up to 10 times, with an exponential backoff 
+going from 200ms to 6.4 seconds.
+For the full details about the default retry logic, see [retry].
+
+## Customizing retry logic
+
+A custom retry logic can be provided either for the full application or for a specific provider.
+
+The implementation is the same for both cases: Custom retry logic is a function that is expected
+to return a `Duration?` value ; which indicates the delay before the next retry (or `null` to stop retrying).
+
+The following implements a custom [retry] function, which
+will retry up to 5 times, with an exponential backoff starting at 200ms, and ignores
+[ProviderException]s
+
+```dart
+Duration? myRetry(int retryCount, Object error) {
+  // Stop retrying on ProviderException
+  if (retryCount >= 5) return null;
+  // Ignore ProviderException
+  if (error is ProviderException) return null;
+
+  return Duration(milliseconds: 200 * (1 << retryCount)); // Exponential backoff
+}
+```
+
+This function can then be used either inside providers to update the retry logic
+for that specific provider:
+
+(
+    // highlight-next-line
+    retry: myRetry,
+    (ref) => 0,
+  );
+  `}
+/>
+
+Or globally by passing it to Containers:
+
+```dart
+// For pure Dart code
+final container = ProviderContainer(
+  // highlight-next-line
+  retry: myRetry,
+);
+
+...
+
+// For Flutter code
+runApp(
+  ProviderScope(
+    // highlight-next-line
+    retry: myRetry,
+    child: MyApp(),
+  ),
+);
+```
+
+### Disabling retry
+
+Disabling retry is as simple as always retuning `null` in the retry function.
+If you wish to disable retry for all your application, do:
+
+```dart
+runApp(
+  ProviderScope(
+    // highlight-next-line
+    retry: (retryCount, error) => null,
+    child: MyApp(),
+  ),
+);
+```
+
+## About the default retry logic
+
+The default retry logic is designed to be a more more clever than a naive "if fail, retry".
+In particular, it will not retry [Error]s and [ProviderException]s.
+
+Errors are not retried, because they are not recoverable. They indicate a bug in the code, and retrying
+would not help. Retrying in those cases would just pollute the logs with useless retry attempts.
+
+As for ProviderExceptions, those are not retried because they indicate
+that a provider did not fail, but instead rethrow an exception from a failed provider. Consider:
+
+(
+    (ref) => throw Exception('This provider always fails'),
+  );
+  
+  final myProvider = Provider<int>(
+    // This provider depends on a failed provider,
+    // and will therefore throw a ProviderException
+    (ref) => ref.watch(failedProvider),
+  );
+  `}
+/>
+
+In this example, although `myProvider` fails, it is not responsible for the failure.
+Retrying it would not help. Instead, it is `failedProvider` that should be retried.
+
+This implies that if you disable retry for `failedProvider`, then `myProvider` will also not be retried.
+
+## Awaiting for retries to complete
+
+You may be aware that you can await for asynchronous providers to complete, by using [FutureProvider.future]:
+
+```dart
+final value = await ref.watch(myProvider.future);
+```
+
+But you may wonder how automatic retry interacts with this.
+
+In short, when an asynchronous provider fails and is retried, the associated future
+will keep waiting until either:
+- all retries are exhausted, or
+- the provider succeeds.
+
+This ensures that `await ref.watch(myProvider.future)` skips the intermediate failures.
+
+[retry]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderContainer/retry.html
+[ProviderException]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderException-class.html
+[Error]: https://api.dart.dev/stable/2.19.6/dart-core/Error-class.html
+[FutureProvider.future]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/FutureProvider/future.html
+
+---
+
+## Offline persistence (experimental)
+
+Offline persistence is the ability to store the state of Providers
+on the user's device, so that it can be accessed even when the user is offline or when the app is restarted.
+
+Riverpod is independent from the underlying database or the protocol used to store the data.
+But by default, Riverpod provides [riverpod_sqflite] alongside basic JSON serialization.
+
+:::caution
+Riverpod's offline persistence is designed to be a simple wrapper around
+databases. It is not designed to fully replace code for interacting with a database.
+
+You may still need to manually interact with a database for:
+- Advanced Database migrations
+- More optimized storage strategies
+- Unusual use-cases
+:::
+
+Offline persistence works using two parts:
+1. [Storage], an interface to interact with your database.
+  This is typically implemented by a package (such as [riverpod_sqflite]).
+1. [AnyNotifier.persist], a function used inside notifiers to opt-in to persistence.
+
+## Creating a Storage
+
+Before we start persisting notifiers, we need to instantiate an object that implements the
+[Storage] interface. This object will be responsible for connecting Riverpod with your database.
+
+You need have to either:
+- Download a package that provides a way to connect Riverpod with your Database of choice.
+- Manually implement [Storage]
+
+If using SQFlite, you can use [riverpod_sqflite]:
+
+```sh
+dart pub add riverpod_sqflite sqflite
+```
+
+Then, you can create a Storage by instantiating [JsonSqFliteStorage]:
+
+_[code snippet]_
+## Persisting the state of a provider
+
+Once we've created a [Storage], we can start persisting the state of providers.  
+Currently, only "Notifiers" can be persisted. See Providers for more information about them.
+
+To persist the state of a notifier, you will typically need to call [AnyNotifier.persist] inside the `build` method of your notifier.
+
+_[code snippet]_
+### Using simplified JSON serialization (code-generation)
+
+If you are using [riverpod_sqflite] and code-generation, you can simplify the `persist` call
+by using the [JsonPersist] annotation:
+
+_[code snippet]_
+## Understanding persist keys
+
+In some of the previous snippets, we've passed a `key` parameter to [AnyNotifier.persist]. 
+That key is there to enable your database to know where to store the state of a provider in the Database.
+Depending on the database, this key may be a unique row ID.
+
+When specifying `key`, it is critical to ensure that:
+- The key is unique across all providers that you persist.  
+  Failing to do so could cause data corruption, as two providers could be trying to write
+  to the same row in the database. If Riverpod detects two providers using the same key, an assertion will be thrown.
+- The key is stable across app restarts.
+  If the key changes, Riverpod will not be able to restore the state of the provider
+  when the app is restarted, and the provider will be initialized as if it was never persisted
+- The key needs to include any parameter that the provider takes.
+  When using "families" (cf Family), the key needs to include the family parameter.
+
+## Changing the cache duration
+
+By default, state is only cached for 2 days. This default ensures that
+no leak happens and deleted providers stay in the database indefinitely
+
+This is generally safe, as Riverpod is designed to be used primarily
+as a cache for IO operations (network requests, database queries, etc).
+But such default will not be suitable for all use-cases, such as if
+you want to store user preferences.
+
+To change this default, specify `options` like so:
+
+_[code snippet]_
+:::caution
+If you set the cache duration to infinite, make sure to
+manually delete the persisted state from the database if you ever delete the provider.
+
+For this, refer to your database's documentation.
+:::
+
+## Using "destroy key" for simple data-migration
+
+A common challenge when persisting data is handling when the data structure changes.
+If you change how an object is serialized, you may need to migrate the data stored in the database.
+
+While Riverpod does not provide a way to do proper data migration, it does provide a way to
+easily replace the old persisted state with a brand new one: Destroy keys.
+
+_[code snippet]_
+Destroy keys help doing simple data migrations by enabling Riverpod to know when
+the old persisted state should be discarded. When a new version of the application
+is released with a different destroyKey, the old persisted state will be discarded,
+and the provider will be initialized as if it was never persisted.
+
+## Waiting for persistence decoding
+
+Until now, we've never waited for [AnyNotifier.persist] to complete.  
+This is voluntary, as this allows the provider to start its network requests as soon as possible.
+However, it means that the provider cannot easily access the persisted state
+right after calling `persist`.
+
+In some cases, instead of initializing the provider with a network request,
+you may want to initialize it with the persisted state.
+
+In that case, you can await the result of `persist` as follows:
+
+```dart
+await persist(...).future;
+```
+
+This enables accessing the persisted state within `build` using `this.state`:
+
+_[code snippet]_
+## Testing persistence
+
+When testing your application, it may be inconvenient to use a real database.
+In particular, unit and widget tests will not have access to a device,
+and thus cannot use a database.
+
+For this reason, Riverpod provides a way to use an in-memory database using [Storage.inMemory].  
+To have your test use this in-memory database, you can use Overrides:
+
+_[code snippet]_
+[riverpod_sqflite]: https://pub.dev/packages/riverpod_sqflite
+[Storage]: https://pub.dev/documentation/hooks_riverpod/latest/experimental_persist/Storage-class.html
+[AnyNotifier.persist]: https://pub.dev/documentation/hooks_riverpod/latest/experimental_persist/NotifierPersistX/persist.html
+[JsonSqFliteStorage]: https://pub.dev/documentation/riverpod_sqflite/latest/riverpod_sqflite/JsonSqFliteStorage-class.html
+[JsonPersist]: https://pub.dev/documentation/riverpod_annotation/latest/experimental_json_persist/JsonPersist-class.html
+[Storage.inMemory]: https://pub.dev/documentation/hooks_riverpod/latest/experimental_persist/Storage/Storage.inMemory.html
+
+---
+
+## ProviderObservers
+
+A [ProviderObserver] is an object used to observe provider lifecycle events in the application.
+They are generally used for logging, analytics, or debugging purposes. 
+
+## Usage
+
+To use a [ProviderObserver], you need to extend the class and override the life-cycles you want to observe.
+There are many methods available. It is recommended to check its [documentation][ProviderObserver] for more details.
+
+## Example: Logger
+
+The following observer logs all state changes of any provider in the application:
+
+{trimSnippet(logger)}Now, every time the value of our provider is updated, the logger will log it:
+
+```
+{
+  "provider": "Provider<int>",
+  "newValue": "1"
+}
+```
+
+To improve debugging, you can optionally give your providers a name:  
+```dart
+final myProvider = Provider<int>((ref) => 0, name: 'MyProvider');
+```
+
+With this change, the log becomes:
+```
+{
+  "provider": "MyProvider",
+  "newValue": "1"
+}
+```
+
+:::tip
+When using code-generation, a name is automatically assigned to providers.
+:::
+
+:::note
+If the state of a provider is mutated, (typically Lists, combined with [Ref.notifyListeners]),
+it is likely that `didUpdateProvider` will receive `previousValue` and `newValue` as the same value.
+
+This happens because Dart updates objects by "reference".
+If you want to change this, you will have to clone your objects before mutating them.
+:::
+
+[ProviderContainer]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderContainer-class.html
+[ProviderScope]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderScope-class.html
+[ProviderObserver]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/ProviderObserver-class.html
+[Ref.notifyListeners]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/Ref/notifyListeners.html
+
+---
+
+# How-To Guides
+
+## How to debounce/cancel network requests
+
+As applications grow in complexity, it's common to have multiple network requests
+in flight at the same time. For example, a user might be typing in a search box
+and triggering a new request for each keystroke. If the user types quickly, the
+application might have many requests in flight at the same time.
+
+Alternatively, a user might trigger a request, then navigate to a different page
+before the request completes. In this case, the application might have a request
+in flight that is no longer needed.
+
+To optimize performance in those situations, there are a few techniques you can
+use:
+
+- "Debouncing" requests. This means that you wait until the user has stopped
+  typing for a certain amount of time before sending the request. This ensures
+  that you only send one request for a given input, even if the user types
+  quickly.
+- "Cancelling" requests. This means that you cancel a request if the user
+  navigates away from the page before the request completes. This ensures that
+  you don't waste time processing a response that the user will never see.
+
+In Riverpod, both of these techniques can be implemented in a similar way.
+The key is to use `ref.onDispose` combined with "automatic disposal" or `ref.watch`
+to achieve the desired behavior.
+
+To showcase this, we will make a simple application with two pages:
+
+- A home screen, with a button which opens a new page
+- A detail page, which displays a random activity from the [Bored API](https://www.boredapi.com/),
+  with the ability to refresh the activity.  
+  See Pull To Refresh for information
+  on how to implement pull-to-refresh.
+
+We will then implement the following behaviors:
+
+- If the user opens the detail page and then navigates back immediately,
+  we will cancel the request for the activity.
+- If the user refreshes the activity multiple times in a row, we will debounce
+  the requests so that we only send one request after the user stops refreshing.
+
+## The application
+
+<img
+  src="/img/how_to/cancel/app.gif"
+  alt="Gif showcasing the application, opening the detail page and refreshing the activity."
+/>
+
+First, let's create the application, without any debouncing or cancelling.  
+We won't use anything fancy here, and stick to a plain `FloatingActionButton` with
+a `Navigator.push` to open the detail page.
+
+First, let's start with defining our home screen. As usual,
+let's not forget to specify a `ProviderScope` at the root of our application.
+
+_[code snippet]_
+Then, let's define our detail page.
+To fetch the activity and implement pull-to-refresh, refer
+to the Pull To Refresh case study.
+
+_[code snippet]_
+## Cancelling requests
+
+Now that we have a working application, let's implement the cancellation logic.
+
+To do so, we will use `ref.onDispose` to cancel the request when the user
+navigates away from the page. For this to work, it is important that the
+automatic disposal of providers is enabled.
+
+The exact code needed to cancel the request will depend on the HTTP client.
+In this example, we will use `package:http`, but the same principle applies
+to other clients.
+
+The key here is that `ref.onDispose` will be called when the user navigates away.
+That is because our provider is no-longer used, and therefore disposed
+thanks to automatic disposal.  
+We can therefore use this callback to cancel the request. When using `package:http`,
+this can be done by closing our HTTP client.
+
+_[code snippet]_
+## Debouncing requests
+
+Now that we have implemented cancellation, let's implement debouncing.  
+At the moment, if the user refreshes the activity multiple times in a row,
+we will send a request for each refresh.
+
+Technically speaking, now that we have implemented cancellation, this is not
+a problem. If the user refreshes the activity multiple times in a row,
+the previous request will be cancelled, when a new request is made.
+
+However, this is not ideal. We are still sending multiple requests, and
+wasting bandwidth and server resources.  
+What we could instead do is delay our requests until the user stops refreshing
+the activity for a fixed amount of time.
+
+The logic here is very similar to the cancellation logic. We will again
+use `ref.onDispose`. However, the idea here is that instead of
+closing an HTTP client, we will rely on `onDispose` to abort the request
+before it starts.  
+We will then arbitrarily wait for 500ms before sending the request.
+Then, if the user refreshes the activity again before the 500ms have elapsed,
+`onDispose` will be invoked, aborting the request.
+
+:::info
+To abort requests, a common practice is to voluntarily throw.  
+It is safe to throw inside providers after the provider has been disposed.
+The exception will naturally be caught by Riverpod and be ignored.
+:::
+
+_[code snippet]_
+## Going further: Doing both at once
+
+We now know how to debounce and cancel requests.  
+But currently, if we want to do another request, we need to copy-paste
+the same logic in multiple places. This is not ideal.
+
+However, we can go further and implement a reusable utility to do both at once.
+
+The idea here is to implement an extension method on `Ref` that will
+handle both cancellation and debouncing in a single method.
+
+_[code snippet]_
+We can then use this extension method in our providers as followed:
+
+_[code snippet]_
+
+---
+
+## How to eagerly initialize providers
+
+All providers are initialized lazily by default. This means that the provider is only
+initialized when it is first used. This is useful for providers that are only
+used in certain parts of the application.
+
+Unfortunately, there is no way to flag a provider as needing to be eagerly initialized due
+to how Dart works (for tree shaking purposes). One solution, however, is to forcibly
+read the providers you want to eagerly initialize at the root of your application.
+
+The recommended approach is to simply "watch" a provider in a Consumer placed right under your `ProviderScope`:
+
+_[code snippet]_
+:::note
+Consider putting the initialization consumer in your "MyApp" or in a public widget.
+This enables your tests to use the same behavior, by removing logic from your main.
+:::
+
+### FAQ
+
+#### Won't this rebuild our entire application when the provider changes?
+
+No, this is not the case.
+In the sample given above, the consumer responsible for eagerly initializing
+is a separate widget, which does nothing but return a `child`.
+
+The key part is that it returns a `child`, rather than instantiating `MaterialApp` itself.
+This means that if `_EagerInitialization` ever rebuilds, the `child` variable
+will not have changed. And when a widget doesn't change, Flutter doesn't rebuild it.
+
+As such, only `_EagerInitialization` will rebuild, unless another widget is also listening to that provider.
+
+#### Using this approach, how can I handle loading and error states?
+
+You can handle loading/error states as you normally would in a `Consumer`.
+Your `_EagerInitialization` could check if a provider is in a "loading" state,
+and if so, return a `CircularProgressIndicator` instead of the `child`:
+
+_[code snippet]_
+#### I've handled loading/error states, but other Consumers still receive an AsyncValue! Is there a way to not have to handle loading/error states in every widget?
+
+Rather than trying to have your provider _not_ expose an `AsyncValue`, you can
+instead have your widgets use `AsyncValue.requireValue`.  
+This will read the data without having to do pattern matching. And in case a bug slips through,
+it will throw an exception with a clear message.
+
+_[code snippet]_
+:::note
+Although there are ways to not expose the loading/error states in those cases (relying on scoping),
+it is generally discouraged to do so.  
+The added complexity of making two providers and using overrides is not worth the trouble.
+:::
+
+---
+
+## Implementing pull-to-refresh
+
+Riverpod natively supports pull-to-refresh thanks to its declarative nature.
+
+In general, pull-to-refreshes can be complex due as there are multiple
+problems to solve:
+
+- Upon first entering a page, we want to show a spinner.
+  But during refresh, we want to show the refresh indicator instead.
+  We shouldn't show both the refresh indicator _and_ spinner.
+- While a refresh is pending, we want to show the previous data/error.
+- We need to show the refresh indicator for as long as the refresh is happening.
+
+Let's see how to solve this using Riverpod.  
+For this, we will make a simple example which recommends a random activity to users.  
+And doing a pull-to-refresh will trigger a new suggestion:
+
+<img
+  alt="A gif of the previously described application working"
+  src="/img/how_to/pull_to_refresh/app.gif"
+/>
+
+## Making a bare-bones application.
+
+Before implement a pull-to-refresh, we first need something to refresh.  
+We can make a simple application which uses [Bored API](https://www.boredapi.com/)
+to suggests a random activity to users.
+
+First, let's define an `Activity` class:
+
+_[code snippet]_
+That class will be responsible for representing a suggested activity
+in a type-safe manner, and handle JSON encoding/decoding.  
+Using Freezed/json_serializable is not required, but it is recommended.
+
+Now, we'll want to define a provider making a HTTP GET request to fetch
+a single activity:
+
+_[code snippet]_
+We can now use this provider to display a random activity.  
+For now, we will not handle the loading/error state, and simply
+display the activity when available:
+
+_[code snippet]_
+## Adding `RefreshIndicator`
+
+Now that we have a simple application, we can add a `RefreshIndicator` to it.  
+That widget is an official Material widget responsible for displaying a refresh indicator
+when the user pulls down the screen.
+
+Using `RefreshIndicator` requires a scrollable surface. But so far, we don't have
+any. We can fix that by using a `ListView`/`GridView`/`SingleChildScrollView`/etc:
+
+_[code snippet]_
+Users can now pull down the screen. But our data isn't refreshed yet.
+
+## Adding the refresh logic
+
+When users pull down the screen, `RefreshIndicator` will invoke
+the `onRefresh` callback. We can use that callback to refresh our data.
+In there, we can use `ref.refresh` to refresh the provider of our choice.
+
+**Note**: `onRefresh` is expected to return a `Future`.
+And it is important for that future to complete when the refresh is done.
+
+To obtain such a future, we can read our provider's `.future` property.
+This will return a future which completes when our provider has resolved.
+
+We can therefore update our `RefreshIndicator` to look like this:
+
+_[code snippet]_
+## Showing a spinner only during initial load and handling errors.
+
+At the moment, our UI does not handle the error/loading states.  
+Instead the data magically pops up when the loading/refresh is done.
+
+Let's change this by gracefully handling those states. There are two
+cases:
+
+- During the initial load, we want to show a full-screen spinner.
+- During a refresh, we want to show the refresh indicator
+  and the previous data/error.
+
+Fortunately, when listening to an asynchronous provider in Riverpod,
+Riverpod gives us an `AsyncValue`, which offers everything we need.
+
+That `AsyncValue` can then be combined with Dart 3.0's pattern matching
+as follows:
+
+_[code snippet]_
+:::caution
+We use `valueOrNull` here, as currently, using `value` throws
+if in error/loading state.
+
+Riverpod 3.0 will change this to have `value` behave like `valueOrNull`.
+But for now, let's stick to `valueOrNull`.
+:::
+
+:::tip
+Notice the usage of the `:final valueOrNull?` syntax in our pattern matching.
+This syntax can be used only because `activityProvider` returns a non-nullable
+`Activity`.
+
+If your data can be `null`, you can instead use `AsyncValue(hasData: true, :final valueOrNull)`.
+This will correctly handle cases where the data is `null`, at the cost of
+a few extra characters.
+:::
+
+## Wrapping up: full application
+
+Here is the combined source of everything we've covered so far:
+
+_[code snippet]_
+
+---
+
+## How to reduce provider/widget rebuilds
+
+With everything we've seen so far, we can already build a fully functional
+application. However, you may have questions regarding performance.
+
+In this page, we will cover a few tips and tricks to possibly optimize your code.
+
+:::caution
+Before doing any optimization, make sure to benchmark your application.
+The added complexity of the optimizations may not be worth minor gains.
+:::
+
+## Filtering widget/provider rebuild using "select".
+
+You may have noticed that, by default, using `ref.watch` causes
+consumers/providers to rebuild whenever _any_ of the properties of an
+object changes.  
+For instance, watching a `User` and only using its "name" will still cause
+the consumer to rebuild if the "age" changes.
+
+But in case you have a consumer using only a subset of the properties,
+you want to avoid rebuilding the widget when the other properties change.
+
+This can be achieved by using the `select` functionality of providers.  
+When doing so, `ref.watch` will no-longer return the full object,
+but rather the selected properties.  
+And your consumers/providers will now rebuild only if those selected
+properties change.
+
+_[code snippet]_
+:::info
+It is possible to call `select` as many times as you wish.
+You are free to call it once per property you desire.
+:::
+
+:::caution
+The selected properties are expected to be immutable.
+Returning a `List` and then mutating that list will not trigger a rebuild.
+:::
+
+:::caution
+Using `select` slightly slows down individual read operations and
+increases the complexity of your code by a tiny bit.
+It may not be worth using it if those "other properties"
+rarely change.
+:::
+
+### Selecting asynchronous properties
+
+In case you are trying to optimize a provider listening to another provider,
+chances are that other provider is asynchronous.
+
+Normally, you would `ref.watch(anotherProvider.future)` to get the value.  
+The issue is, `select` will apply on an `AsyncValue` – which is not something
+you can await.
+
+For this purpose, you can instead use `selectAsync`. It is unique to asynchronous
+code, and enables performing a `select` operation on the data emitted by a provider.  
+Its usage is similar to that of `select`, but returns a `Future` instead:
+
+_[code snippet]_
+
+---
+
+## Testing your providers
+
+A core part of the Riverpod API is the ability to test your providers in isolation.
+
+For a proper test suite, there are a few challenges to overcome:
+
+- Tests should not share state. This means that new tests should
+  not be affected by the previous tests.
+- Tests should give us the ability to mock certain functionalities
+  to achieve the desired state.
+- The test environment should be as close as possible to the real
+  environment.
+
+Fortunately, Riverpod makes it easy to achieve all of these goals.
+
+## Setting up a test
+
+When defining a test with Riverpod, there are two main scenarios:
+
+- Unit tests, usually with no Flutter dependency.
+  This can be useful for testing the behavior of a provider in isolation.
+- Widget tests, usually with a Flutter dependency.
+  This can be useful for testing the behavior of a widget that uses a provider.
+
+### Unit tests
+
+Unit tests are defined using the `test` function from [package:test](https://pub.dev/packages/test).
+
+The main difference with any other test is that we will want to create
+a `ProviderContainer` object. This object will enable our test to interact
+with providers.
+
+A typical test using `ProviderContainer` will look like:
+
+_[code snippet]_
+Now that we have a ProviderContainer, we can use it to read providers using:
+
+- `container.read`, to read the current value of a provider.
+- `container.listen`, to listen to a provider and be notified of changes.
+
+:::caution
+Be careful when using `container.read` when providers are automatically disposed.  
+If your provider is not listened to, chances are that its state will get destroyed
+in the middle of your test.
+
+In that case, consider using `container.listen`.  
+Its return value enables reading the current value of provider anyway,
+but will also ensure that the provider is not disposed in the middle of your test:
+
+_[code snippet]_
+:::
+
+### Widget tests
+
+Widget tests are defined using the `testWidgets` function from [package:flutter_test](https://pub.dev/packages/flutter_test).
+
+In this case, the main difference with usual Widget tests is that we must add
+a `ProviderScope` widget at the root of `tester.pumpWidget`:
+
+_[code snippet]_
+This is similar to what we do when we enable Riverpod in our Flutter app.
+
+Then, we can use `tester` to interact with our widget.
+Alternatively if you want to interact with providers, you can obtain
+a `ProviderContainer`.
+One can be obtained using `tester.container()`.  
+By using `tester`, we can therefore write the following:
+
+_[code snippet]_
+We can then use it to read providers. Here's a full example:
+
+_[code snippet]_
+## Mocking providers
+
+So far, we've seen how to set up a test and basic interactions with providers.
+However, in some cases, we may want to mock a provider.
+
+The cool part: All providers can be mocked by default, without any additional setup.  
+This is possible by specifying the `overrides` parameter on either
+`ProviderScope` or `ProviderContainer`.
+
+Consider the following provider:
+
+_[code snippet]_
+We can mock it using:
+
+_[code snippet]_
+## Spying on changes in a provider
+
+Since we obtained a `ProviderContainer` in our tests, it is possible to
+use it to "listen" to a provider:
+
+_[code snippet]_
+You can then combine this with packages such as [mockito](https://pub.dev/packages/mockito)
+or [mocktail](https://pub.dev/packages/mocktail) to use their `verify` API.  
+Or more simply, you can add all changes in a list and assert on it.
+
+## Awaiting asynchronous providers
+
+In Riverpod, it is very common for providers to return a Future/Stream.  
+In that case, chances are that our tests need to await for that asynchronous operation
+to be completed.
+
+One way to do so is to read the `.future` of a provider:
+
+_[code snippet]_
+## Mocking Notifiers
+
+It is generally discouraged to mock Notifiers. This is because Notifiers cannot be
+instantiated on their own, and only work when used as part of a Provider.
+
+Instead, you should likely introduce a level of abstraction in the logic of your
+Notifier, such that you can mock that abstraction.
+For instance, rather than mocking a Notifier, you could mock a "repository"
+that the Notifier uses to fetch data from.
+
+If you insist on mocking a Notifier, there is a special consideration
+to create such a mock: Your mock must subclass the original Notifier
+base class: You cannot "implement" Notifier, as this would break the interface.
+
+As such, when mocking a Notifier, instead of writing the following mockito code:
+
+```dart
+class MyNotifierMock with Mock implements MyNotifier {}
+```
+
+You should instead write:
+
+_[code snippet]_
+:::info
+If using code-generation, for the above to work, your mock will have to
+be placed in the same file as the Notifier you are mocking.
+Otherwise you would not have access to the `_$MyNotifier` class.
+
+Then, to use your notifier you could do:
+
+_[code snippet]_
+
+---
+
+# Tutorials
+
+## Your first Riverpod app
+
+In this tutorial, we will build a random joke generator app using Riverpod:
+
+## Key points
+- Learn to install Riverpod
+- Create your first provider to make a network request
+- Use [Consumer] to display the data
+- Handle [AsyncValue] to display loading and error states
+
+## Setting up the project
+
+### Creating a Flutter project
+
+To start, let's create a new Flutter project:
+
+```sh
+flutter create first_app
+```
+
+Then, open the project in your favorite editor.
+
+### Creating a mocked UI
+
+Before we start to write any form of logic, let's create the UI of our app.
+Instead of using a real API, we will start with static data.
+
+Let's create a new file called `home.dart` in the `lib` directory of our project.
+In it, you can paste the following code:
+
+_[code snippet]_
+Then, we can update our `main.dart` file to use this new `HomeView` widget:
+
+_[code snippet]_
+If you run the app now, you should see the following:
+
+![Mocked UI](/img/tutorials/first_app/mocked_ui.png)
+
+### Adding Riverpod to the project
+
+After creating the project, we need to add Riverpod as a dependency.
+
+We will be using Riverpod and Flutter, so we will install the [flutter_riverpod] package.  
+Similarly, we will be performing network requests using the [Dio] package, so we will install that as well.
+
+You can do so by typing the following command in your terminal:
+
+```sh
+flutter pub add flutter_riverpod dio
+```
+
+This will add the latest version of Riverpod to your project, along with Dio.
+
+### (Optional) Adding riverpod_lint
+
+To help you write better Riverpod code, you can install the [riverpod_lint] package.  
+This package provides a set of refactors to more easily write Riverpod code, as well as a set of lints to help you avoid common mistakes.
+
+Riverpod_lint is implemented using [analysis_server_plugin]. As such, it is installed through `analysis_options.yaml`
+
+Long story short, create an `analysis_options.yaml` next to your `pubspec.yaml` and add:
+
+```yaml title="analysis_options.yaml"
+plugins:
+  riverpod_lint: <latest version from https://pub.dev/packages/riverpod_lint>
+```
+
+### Adding ProviderScope in our main function
+
+For Riverpod to work, we need to update our `main` function to include a [ProviderScope].  
+You can learn about those objects in the Containers section.
+
+Here's the updated `main` function:
+
+_[code snippet]_
+## Creating a model class
+
+In this tutorial, we will fetch data from a [Random Joke generator](https://official-joke-api.appspot.com/random_joke) API.
+
+This API returns a JSON object that looks like this:
+
+```json
+{
+  "type": "general",
+  "setup": "Why did the scarecrow win an award?",
+  "punchline": "Because he was outstanding in his field.",
+  "id": 333
+}
+```
+
+To represent this data in our app, we will create a model class called `Joke`.  
+
+For this, let's create a new file called `joke.dart` in the `lib` directory of our project.
+Here's how the `Joke` class looks like:
+
+json) {
+    return Joke(
+      type: json['type']! as String,
+      setup: json['setup']! as String,
+      punchline: json['punchline']! as String,
+      id: json['id']! as int,
+    );
+  }
+  
+  final String type;
+  final String setup;
+  final String punchline;
+  final int id;
+}
+  `}
+/>
+
+Notice the `fromJson` factory constructor.  
+Since our API returns a JSON object, we need a way to convert JSON data into our `Joke` class.
+This constructor takes a `Map` and returns a `Joke` instance.
+
+## Writing a function that calls the API.
+
+Now that we have our model class, we can write a function that fetches the data from the API.
+We will use the [Dio] package here, because it naturally throws if a request fails, which is convenient for our use case.
+But you can use any HTTP client you prefer.
+
+We can place that logic in the `joke.dart` file we just created,
+as this logic is closely related to the `Joke` class.
+
+fetchRandomJoke() async {
+    // Fetching a random joke from a public API
+    final response = await dio.get>(
+      'https://official-joke-api.appspot.com/random_joke',
+    );
+  
+    return Joke.fromJson(response.data!);
+  }
+  `}
+/>
+
+:::info
+Notice how we did not catch any error from the API call.  
+This is on purpose. Riverpod will handle errors for us, so we don't need to do it manually.
+:::
+
+## Creating a provider that fetches the data
+
+Now that we have a function to query the API, we can create a "provider" responsible for
+caching the result of that API.  
+See Providers for more information about them.
+
+Since our `fetchRandomJoke` function returns a `Future`, we will use [FutureProvider].
+We can place the provider in the same `joke.dart` file, as it is also related to the `Joke` class.
+
+By doing this, the execution of `fetchRandomJoke` will be cached, and regardless of how
+many times we access to the value, the network request will only be performed once.
+
+((ref) async {
+    // Using the fetchRandomJoke function to get a random joke
+    return fetchRandomJoke();
+  });
+  `}
+/>
+
+:::info
+The separation between our `fetchRandomJoke` function and the `randomJokeProvider` is not mandatory.  
+You can directly write the content of `fetchRandomJoke` inside the provider if you prefer:
+
+```dart
+final randomJokeProvider = FutureProvider((ref) async {
+  final response = await dio.get>(
+    'https://official-joke-api.appspot.com/random_joke',
+  );
+
+  return Joke.fromJson(response.data!);
+});
+```
+:::
+
+## Displaying the data in the UI
+
+### Wrapping our UI in a Consumer
+
+Now that we have a provider, it is time to update our `HomeView` widget to dynamically load data.
+
+To do so, we will need another feature of Riverpod: the [Consumer] widget.  
+This widget allows us to read the value of a provider and rebuild the UI when the value changes.
+It is used in a manner that is reminiscent of widgets such like [StreamBuilder].
+
+Specifically, we will want to encapsulate the `Stack` in a `Consumer` widget.  
+If you have installed [riverpod_lint] in the earlier step, you can use one of the built-in refactors:
+
+![Wrap in Consumer refactor in action](/img/tutorials/first_app/wrap_in_consumer.gif)
+
+The updated `home.dart` code should look like this:
+
+_[code snippet]_
+### Obtaining our joke and listening to its changes
+
+Now that we have a `Consumer`, we can use its `ref` parameter to read our provider.  
+Using this object, we can call `ref.watch(randomJokeProvider)` to obtain the current value of the provider.
+But there are other ways to interact with providers! See Refs for more information.
+
+Our updated `Consumer` should look like this:
+
+```dart
+Consumer(
+  builder: (context, ref, child) {
+    // highlight-next-line
+    final randomJoke = ref.watch(randomJokeProvider);
+    // ...
+  },
+)
+```
+
+With this line, Riverpod will automatically fetch the joke from our API and cache the result.
+We can now use the `randomJoke` variable to display the joke in our UI.
+
+### Handling loading and error states
+
+The `randomJoke` variable we created earlier is not of type `Joke`, but rather of type `AsyncValue`.  
+[AsyncValue] is a Riverpod type that represents the state of an asynchronous operation, such as a network request.
+It includes information about loading, success, and error states. `AsyncValue` is in many ways similar to the `AsyncSnapshot` type used in [StreamBuilder].
+
+A convenient way to handle the different states is to use Dart's `switch` feature. It is similar to an
+`if`/`else if` chain, but tailored for handling conditions on one specific object.
+
+A common way to use it when combined with `AsyncValue` is as follows:
+
+```dart
+switch (asyncValue) {
+  // If "value" is non-null, it means that we have some data.
+  case AsyncValue(:final value?):
+    return Text(value);
+  // If "error" is non-null, it means that the operation failed.
+  case AsyncValue(error: != null):
+    return Text('Error: ${asyncValue.error}');
+  // If we're neither in data state nor in error state, then we're in loading state.
+  case AsyncValue():
+    return const CircularProgressIndicator();
+}
+```
+
+:::caution
+The order of operation matters!  
+If using the syntax used above, it is important to check for values 
+_before_ checking for errors and to handle the loading state last.
+
+If using a different order, you may see incorrect behavior, such as
+showing a progress indicator when the request has already completed.
+:::
+
+We can now update our `Stack` to display the joke, loading indicator, or error message based on the state of `randomJoke`:
+
+SelectableText(
+          '$\{value.setup}\\n\\n$\{value.punchline}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 24),
+        ),
+        // On error, we display a simple error message.
+        AsyncValue(error: != null) => const Text('Error fetching joke'),
+        // While the request is loading, we display a progress indicator.
+        AsyncValue() => const CircularProgressIndicator(),
+      },
+  
+      // <code for the button remains unchanged>
+    ],
+  );
+`}
+/>
+
+At this stage, our application is connected to internet and a random joke is displayed when the app is launched!
+
+### Connecting the "Get another joke" button
+
+Currently, we display a random joke when the app is launched, but clicking on the
+button does nothing. Let's update the button to fetch a new joke when clicked.
+
+We _could_ use a pattern similar to [ChangeNotifier] and manually handle the state.  
+Riverpod supports such patterns, but it is not necessary here.
+
+Instead, we can tell Riverpod to re-execute the logic of our provider when the button is clicked.
+This can be done by using [Ref.invalidate] like so:
+
+```dart
+ElevatedButton(
+  // highlight-next-line
+  onPressed: () => ref.invalidate(randomJokeProvider),
+  child: const Text('Get another joke'),
+),
+```
+
+That is all we need to do!  
+When the button is clicked, Riverpod will re-execute the logic of `randomJokeProvider`, which will
+fetch a new joke from the API and update the UI accordingly.
+
+### Adding a `LinearProgressIndicator` when a new joke is being fetched
+
+You may have noticed that when clicking on the "Get another joke" button, the app does not show any loading indicator.
+
+This is because when we call [Ref.invalidate], the existing cache is not destroyed.
+Instead, while the new joke is being fetched, we retain information about the previous joke.
+This allows us to display the previous joke while the new one is being fetched.
+
+However, UIs may want to handle those cases and show both a loading indicator and the previous joke.
+A [LinearProgressIndicator] is a common way to do so. To add this indicator, we can check
+[AsyncValue.isRefreshing]. This flag is `true` when old data is available and a new request is being made.
+
+Our updated `Stack` should look like this:
+
+```dart
+return Stack(
+  alignment: Alignment.center,
+  children: [
+    // During the second request, we show a special loading indicator
+    // highlight-next-line
+    if (randomJoke.isRefreshing)
+      const Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: LinearProgressIndicator(),
+      ),
+
+    // Show the data and button like before
+  ],
+);
+```
+
+That's all!  
+We now have a fully functional random joke generator app that fetches jokes from an API and displays them in the UI.  
+And we have handled all edge-cases, such as loading and error states.
+
+Notice how we never had to write a `try/catch` or write code such as `isLoading = true/false`.
+
+[ProviderScope]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderScope-class.html
+[flutter_riverpod]: https://pub.dev/packages/flutter_riverpod
+[FutureProvider]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/FutureProvider-class.html
+[Dio]: https://pub.dev/packages/dio
+[Consumer]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Consumer-class.html
+[AsyncValue]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/AsyncValue-class.html
+[StreamBuilder]: https://api.flutter.dev/flutter/widgets/StreamBuilder-class.html
+[ChangeNotifier]: https://api.flutter.dev/flutter/foundation/ChangeNotifier-class.html
+[Ref.invalidate]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Ref/invalidate.html
+[LinearProgressIndicator]: https://api.flutter.dev/flutter/material/LinearProgressIndicator-class.html
+[AsyncValue.isRefreshing]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/AsyncValueX/isRefreshing.html
+[riverpod_lint]: https://pub.dev/packages/riverpod_lint
+[ProviderScope]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderScope-class.html
+[analysis_server_plugin]: https://pub.dev/packages/analysis_server_plugin
+
+---
+
+# FAQ & Do's / Don'ts
+
+## FAQ
+
+Here are some commonly asked questions from the community:
+
+## What is the difference between `ref.refresh` and `ref.invalidate`?
+
+You may have noticed that `ref` has two methods to force a provider to recompute,
+and wonder how they differ.
+
+It's simpler than you think: `ref.refresh` is nothing but syntax sugar for
+`invalidate` + `read`:
+
+```dart
+T refresh(provider) {
+  invalidate(provider);
+  return read(provider);
+}
+```
+
+If you do not care about the new value of a provider after recomputing it,
+then `invalidate` is the way to go.  
+If you do, use `refresh` instead.
+
+:::info
+This logic is automatically enforced through lint rules.  
+If you tried to use `ref.refresh` without using the returned value,
+you would get a warning.
+:::
+
+The main difference in behavior is by reading the provider right
+after invalidating it, the provider **immediately** recomputes.  
+Whereas if we call `invalidate` but don't read it right after,
+then the update will trigger _later_.
+
+That "later" update is generally at the start of the next frame.
+Yet, if a provider that is currently not being listened to is invalidated, 
+it will not be updated until it is listened to again.
+
+## Why is there no shared interface between Ref and WidgetRef?
+
+Riverpod voluntarily dissociates `Ref` and `WidgetRef`.  
+This is done on purpose to avoid writing code which conditionally
+depends on one or the other.
+
+One issue is that `Ref` and `WidgetRef`, although similar looking,
+have subtle differences.  
+Code relying on both would be unreliable in ways that are difficult to spot.
+
+At the same time, relying on `WidgetRef` is equivalent to relying on `BuildContext`.
+It is effectively putting your logic in the UI layer, which is not recommended.
+
+---
+
+Such code should be refactored to **always** use `Ref`.
+
+The solution to this problem is typically to move your logic
+into a `Notifier` (see Providers), 
+and then have your logic be a method of that `Notifier`.
+
+This way, when your widgets want to invoke this logic, they can
+write something along the lines of:
+
+```dart
+ref.read(yourNotifierProvider.notifier).yourMethod();
+```
+
+`yourMethod` would use the `Notifier`'s `Ref` to interact with other providers.
+
+## Why do we need to extend ConsumerWidget instead of using the raw StatelessWidget?
+
+This is due to an unfortunate limitation in the API of `InheritedWidget`.
+
+There are a few problems:
+
+- It is not possible to implement an "on change" listener with `InheritedWidget`.
+  That means that something such as `ref.listen` cannot be used with `BuildContext`.
+
+  `State.didChangeDependencies` is the closest thing to it, but it is not reliable.
+  One issue is that the life-cycle can be triggered even if no dependency changed,
+  especially if your widget tree uses GlobalKeys (and some Flutter widgets already do so internally).
+
+- Widgets listening to an `InheritedWidget` never stop listening to it.
+  This is usually fine for pure metadata, such as "theme" or "media query".
+
+  For business logic, this is a problem.
+  Say you use a provider to represent a paginated API.
+  When the page offset changes, you wouldn't want your widget to keep listening
+  to the previously visible pages.
+
+- `InheritedWidget` has no way to track when widgets stop listening to them.
+  Riverpod sometimes relies on tracking whether or not a provider is being listened to.
+
+This functionality is crucial for both the auto dispose mechanism and the ability to
+pass arguments to providers.  
+Those features are what make Riverpod so powerful.
+
+Maybe in a distant future, those issues will be fixed. In that case,
+Riverpod would migrate to using `BuildContext` instead of `Ref`.
+This would enable using `StatelessWidget` instead of `ConsumerWidget`.  
+But that's for another time!
+
+## Why doesn't hooks_riverpod export flutter_hooks?
+
+This is to respect good versioning practices.
+
+While you cannot use `hooks_riverpod` without `flutter_hooks`,
+both packages are versioned independently. A breaking change could happen
+in one but not the other.
+
+## Is there a way to reset all providers at once?
+
+No, there is no way to reset all providers at once.
+
+This is on purpose, as it is considered an anti-pattern. Resetting all providers
+at once will often reset providers that you did not intend to reset.
+
+This is commonly asked by users who want to reset the state of their application
+when the user logs out.  
+If this is what you are after, you should instead have everything dependent on the
+user's state to `ref.watch` the "user" provider.
+
+Then, when the user logs out, all providers depending on it would automatically
+be reset but everything else would remain untouched.
+
+## I have the error "Using "ref" when a widget is about to or has been unmounted is unsafe." after the widget was disposed", what's wrong?
+
+You might also see "Bad state: No ProviderScope found", which is an older
+error message of the same issue.
+
+This error happens when you try to use `ref` in a widget that is no longer
+mounted. This generally happens after an `await`:
+
+```dart
+ElevatedButton(
+  onPressed: () async {
+    await future;
+    ref.read(...); // May throw "Using "ref" when a widget is about to or has been unmounted is unsafe."
+  }
+)
+```
+
+The solution is to, like with `BuildContext`, check `mounted` before using `ref`:
+
+```dart
+ElevatedButton(
+  onPressed: () async {
+    await future;
+    if (!context.mounted) return;
+    ref.read(...); // No longer throws
+  }
+)
+```
+
+---
+
+## DO/DON'T
+
+To ensure good maintainability of your code, here is a list of good practices
+you should follow when using Riverpod.
+
+This list is not exhaustive, and is subject to change.  
+If you have any suggestions, feel free to [open an issue](https://github.com/rrousselGit/riverpod/issues/new?assignees=rrousselGit&labels=documentation%2C+needs+triage&projects=&template=example_request.md&title=).
+
+Items in this list are not in any particular order.
+
+A good portion of these recommendations can be enforced with [riverpod_lint](https://pub.dev/packages/riverpod_lint).
+See for installation instructions.
+
+## AVOID initializing providers in a widget
+
+Providers should initialize themselves.  
+They should not be initialized by an external element such as a widget.
+
+Failing to do so could cause possible race conditions and unexpected behaviors.
+
+**DON'T**
+
+```dart
+class WidgetState extends State{
+  @override
+  void initState() {
+    super.initState();
+    // Bad: the provider should initialize itself
+    ref.read(provider).init();
+  }
+}
+```
+
+**CONSIDER**
+
+There is no "one-size fits all" solution to this problem.  
+If your initialization logic depends on factors external to the provider,
+often the correct place to put such logic is in the `onPressed` method of a button
+triggering navigation:
+
+```dart
+ElevatedButton(
+  onPressed: () {
+    ref.read(provider).init();
+    Navigator.of(context).push(...);
+  },
+  child: Text('Navigate'),
+)
+```
+
+## AVOID using providers for Ephemeral state.
+
+Providers are designed to be for shared business state.
+They are not meant to be used for [Ephemeral state](https://docs.flutter.dev/data-and-backend/state-mgmt/ephemeral-vs-app#ephemeral-state), such as for:
+
+- The currently selected item.
+- Form state/
+  Because leaving and re-entering the form should typically reset the form state.
+  This includes pressing the back button during a multi-page forms.
+- Animations.
+- Generally everything that Flutter deals with a "controller" (e.g. `TextEditingController`)
+
+If you are looking for a way to handle local widget state, consider using
+[flutter_hooks](https://pub.dev/packages/flutter_hooks) instead.
+
+One reason why this is discouraged is that such state is often scoped to a route.  
+Failing to do so could break your app's back button, due to a new page overriding
+the state of a previous page.
+
+For instance say we were to store the currently selected `book` in a provider:
+
+```dart
+final selectedBookProvider = StateProvider((ref) => null);
+```
+One challenge we could face is, the navigation history could look like:
+```
+/books
+/books/42
+/books/21
+```
+
+In this scenario, when pressing the back button, we should expect to go back to `/books/42`.
+But if we were to use `selectedBookProvider` to store the selected book,
+the selected ID would not reset to its previous value, and we would keep seeing `/books/21`.
+
+## DON'T perform side effects during the initialization of a provider
+
+Providers should generally be used to represent a "read" operation.
+You should not use them for "write" operations, such as submitting a form.
+
+Using providers for such operations could have unexpected behaviors, such as
+skipping a side-effect if a previous one was performed.
+
+If you are looking at a way to handle loading/error states of a side-effect,
+see Mutations.
+
+**DON'T**:
+
+```dart
+final submitProvider = FutureProvider((ref) async {
+  final formState = ref.watch(formState);
+
+  // Bad: Providers should not be used for "write" operations.
+  return http.post('https://my-api.com', body: formState.toJson());
+});
+```
+
+## PREFER ref.watch/read/listen (and similar APIs) with statically known providers
+
+Riverpod strongly recommends enabling lint rules (via `riverpod_lint`).  
+But for lints to be effective, your code should be written in a way that is
+statically analysable.
+
+Failing to do so could make it harder to spot bugs or cause
+false positives with lints.
+
+**Do**:
+
+```dart
+final provider = Provider((ref) => 42);
+
+...
+
+// OK because the provider is known statically
+ref.watch(provider);
+```
+
+**Don't**:
+
+```dart
+class Example extends ConsumerWidget {
+  Example({required this.provider});
+  final Provider<int> provider;
+
+  @override
+  Widget build(context, ref) {
+    // Bad because static analysis cannot know what `provider` is
+    ref.watch(provider);
+  }
+}
+```
+
+## AVOID dynamically creating providers
+
+Providers should exclusively be top-level final variables.
+
+**Do**:
+
+```dart
+final provider = Provider((ref) => 'Hello world');
+```
+
+**Don't**:
+
+```dart
+class Example {
+  // Unsupported operation. Could cause memory leaks and unexpected behaviors.
+  final provider = Provider((ref) => 'Hello world');
+}
+```
+
+:::info
+Creating providers as static final variables is allowed,
+but not supported by the code-generator.
+:::
+
+---
+
+# Concepts (legacy/supplemental)
+
+## About code generation
+
+const TRANSPARENT_STYLE = { backgroundColor: "transparent" };
+const RED_STYLE = { color: "indianred", fontWeight: "700" };
+const BLUE_STYLE = { color: "rgb(103, 134, 196)", fontWeight: "700" };
+const FONT_16_STYLE = {
+  fontSize: "16px",
+  fontWeight: "700",
+};
+const BLUE_20_STYLE = {
+  color: "rgb(103, 134, 196)",
+  fontSize: "20px",
+  fontWeight: "700",
+};
+const PROVIDER_STYLE = {
+  textAlign: "center",
+  fontWeight: "600",
+  maxWidth: "210px",
+};
+const BEFORE_STYLE = {
+  minWidth: "120px",
+  textAlign: "center",
+  fontWeight: "600",
+  color: "crimson",
+};
+const AFTER_STYLE = {
+  minWidth: "120px",
+  textAlign: "center",
+  fontWeight: "600",
+  color: "rgb(40,180,40)",
+};
+
+Code generation is the idea of using a tool to generate code for us.
+In Dart, it comes with the downside of requiring an extra step to "compile"
+an application. Although this problem may be solved in the near future, as the
+Dart team is working on a potential solution to this problem.
+
+In the context of Riverpod, code generation is about slightly changing the syntax
+for defining a "provider". For example, instead of:
+
+{trimSnippet(rawFetchUser)}Using code generation, we would write:
+
+{trimSnippet(fetchUser)}When using Riverpod, code generation is completely optional. It is entirely possible
+to use Riverpod without.
+At the same time, Riverpod embraces code generation and recommends using it.
+
+For information on how to install and use Riverpod's code generator, refer to
+the Getting Started page. Make sure to enable code generation
+in the documentation's sidebar.
+
+## Should I use code generation?
+
+Code generation is optional in Riverpod.
+With that in mind, you may wonder if you should use it or not.
+
+The answer is: **Only if you already use code-generation for other things**. (cf Freezed, json_serializable, etc.)  
+When the Dart team was working on a feature called "macros", using code generation
+was the recommended way to use Riverpod. Unfortunately, those have been cancelled.
+
+While code-generation brings many benefits, it currently is still fairly slow.
+The Dart team is working on improving the performance of code generation,
+but it is unclear when that will be available and how much it will improve.
+As such, if you are not already using code generation in your project, it is
+probably not worth it to start using it just for Riverpod.
+
+At the same time, many applications already use code generation with packages such
+as [Freezed](https://pub.dev/packages/freezed) or [json_serializable](https://pub.dev/packages/json_serializable).
+In that case, your project probably is already set up for code generation, and
+using Riverpod should be simple.
+
+## What are the benefits of using code generation?
+
+You may be wondering: "If code generation is optional in Riverpod, why use it?"
+
+As always with packages: To make your life easier.
+This includes but is not limited to:
+
+- Better syntax, more readable/flexible, and with a reduced learning curve.
+  - No need to worry about the type of provider. Write your logic,
+    and Riverpod will pick the most suitable provider for you.
+  - The syntax no longer looks like we're defining a "dirty global variable".
+    Instead we are defining a custom function/class.
+  - Passing parameters to providers is now unrestricted. Instead of being limited to
+    using Family and passing a single positional parameter,
+    you can now pass any parameter. This includes named parameters, optional ones,
+    and even default values.
+- **Stateful hot-reload** of the code written in Riverpod.
+- Better debugging, through the generation of extra metadata that the debugger then picks up.
+
+## The Syntax
+
+### Defining a provider:
+
+When defining a provider using code generation, it is helpful to keep in mind the following points:
+
+- Providers can be defined either as an annotated <span style={BLUE_STYLE}>function</span> or
+  as an annotated <span style={BLUE_STYLE}>class</span>. They are pretty much the same,
+  but Class-based provider has the advantage of including public methods that enable
+  external objects to modify the state of the provider (side-effects). Functional providers
+  are syntax sugar for writing a Class-based provider with nothing but a `build` method,
+  and as such cannot be modified by the UI.
+- All Dart <span style={RED_STYLE}>async</span> primitives (Future, FutureOr, and Stream) are supported.
+- When a function is marked as <span style={RED_STYLE}>async</span>, the provider automatically handles
+  errors/loading states and exposes an AsyncValue.
+
+<table>
+  <colgroup></colgroup>
+  <tr>
+    <th></th>
+    <th style={{ textAlign: "center" }}>
+      <span style={BLUE_20_STYLE}>Functional</span>
+      <br />
+      (Can’t perform side-effects
+      <br />
+      using public methods)
+    </th>
+    <th style={{ textAlign: "center" }}>
+      <span style={BLUE_20_STYLE}>Class-Based</span>
+      <br />
+      (Can perform side-effects
+      <br />
+      using public methods)
+    </th>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td>
+      <span style={FONT_16_STYLE}>
+        <span style={RED_STYLE}>Sync</span>
+      </span>
+    </td>
+    <td>
+      {trimSnippet(syncFn)}</td>
+    <td>
+      {trimSnippet(syncClass)}</td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td>
+      <span style={FONT_16_STYLE}>
+        <span style={RED_STYLE}>Async - Future</span>
+      </span>
+    </td>
+    <td>
+      {trimSnippet(asyncFnFuture)}</td>
+    <td>
+      {trimSnippet(asyncClassFuture)}</td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td>
+      <span style={FONT_16_STYLE}>
+        <span style={RED_STYLE}>Async - Stream</span>
+      </span>
+    </td>
+    <td>
+      {trimSnippet(asyncFnStream)}</td>
+    <td>
+      {trimSnippet(asyncClassStream)}</td>
+  </tr>
+</table>
+
+### Enabling/disable autoDispose:
+
+When using code generation, providers are autoDispose by default. That means that they will automatically
+dispose of themselves when there are no listeners attached to them (ref.watch/ref.listen).  
+This default setting better aligns with Riverpod's philosophy. Initially with the non-code generation variant,
+autoDispose was off by default to accommodate users migrating from `package:provider`.
+
+If you want to disable autoDispose, you can do so by passing `keepAlive: true` to the annotation.
+
+{trimSnippet(autoDisposeCodeGen)}### Passing parameters to a provider (family):
+
+When using code generation, we no-longer need to rely on the `family` modifier to pass parameters to a provider.
+Instead, the main function of our provider can accept any number of parameters, including named, optional, or default values.  
+Do note however that these parameters should still have a consistent ==.
+Meaning either the values should be cached, or the parameters should override ==.
+
+<table>
+  <colgroup>
+    <col style={{ minWidth: "400px" }} />
+    <col style={{ minWidth: "400px" }} />
+  </colgroup>
+  <tr>
+    <th style={{ textAlign: "center" }}>
+      <span style={BLUE_20_STYLE}>Functional</span>
+    </th>
+    <th style={{ textAlign: "center" }}>
+      <span style={BLUE_20_STYLE}>Class-Based</span>
+    </th>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td>
+      {trimSnippet(familyFn)}</td>
+    <td>
+      {trimSnippet(familyClass)}</td>
+  </tr>
+</table>
+
+## Migrate from non-code-generation variant:
+
+When using non-code-generation variant, it is necessary to manually determine the type of your provider.
+The following are the corresponding options for transitioning into code-generation variant:
+
+<table>
+  <colgroup></colgroup>
+  <tr>
+    <td style={PROVIDER_STYLE} colspan="2">
+      Provider
+    </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={BEFORE_STYLE}>Before</td>
+    <td>
+      {trimSnippet(provider)}</td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={AFTER_STYLE}>After</td>
+    <td>
+      {trimSnippet(syncFn)}</td>
+  </tr>
+  <colgroup></colgroup>
+  <tr>
+    <td style={PROVIDER_STYLE} colspan="2">
+      NotifierProvider
+    </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={BEFORE_STYLE}>Before</td>
+    <td>
+      {trimSnippet(notifierProvider)}</td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={AFTER_STYLE}>After</td>
+    <td>
+      {trimSnippet(syncClass)}</td>
+  </tr>
+  <colgroup></colgroup>
+  <tr>
+    <td style={PROVIDER_STYLE} colspan="2">
+      FutureProvider
+    </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={BEFORE_STYLE}>Before</td>
+    <td>
+      {trimSnippet(futureProvider)}</td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={AFTER_STYLE}>After</td>
+    <td>
+      {trimSnippet(asyncFnFuture)}</td>
+  </tr>
+  <colgroup></colgroup>
+  <tr>
+    <td style={PROVIDER_STYLE} colspan="2">
+      StreamProvider
+    </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={BEFORE_STYLE}>Before</td>
+    <td>
+      {trimSnippet(streamProvider)}</td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={AFTER_STYLE}>After</td>
+    <td>
+      {trimSnippet(asyncFnStream)}</td>
+  </tr>
+  <colgroup></colgroup>
+  <tr>
+    <td style={PROVIDER_STYLE} colspan="2">
+      AsyncNotifierProvider
+    </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={BEFORE_STYLE}>Before</td>
+    <td>
+      {trimSnippet(asyncNotifierProvider)}
+      </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={AFTER_STYLE}>After</td>
+    <td>
+      {trimSnippet(asyncClassFuture)}</td>
+  </tr>
+  <colgroup></colgroup>
+  <tr>
+    <td style={PROVIDER_STYLE} colspan="2">
+      StreamNotifierProvider
+    </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={BEFORE_STYLE}>Before</td>
+    <td>
+      {trimSnippet(streamNotifierProvider)}
+      </td>
+  </tr>
+  <tr style={TRANSPARENT_STYLE}>
+    <td style={AFTER_STYLE}>After</td>
+    <td>
+      {trimSnippet(asyncClassStream)}</td>
+  </tr>
+</table>
+
+[hookwidget]: https://pub.dev/documentation/flutter_hooks/latest/flutter_hooks/HookWidget-class.html
+[statefulwidget]: https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html
+[riverpod]: https://github.com/rrousselgit/riverpod
+[hooks_riverpod]: https://pub.dev/packages/hooks_riverpod
+[flutter_riverpod]: https://pub.dev/packages/flutter_riverpod
+[flutter_hooks]: https://github.com/rrousselGit/flutter_hooks
+[build]: https://pub.dev/documentation/riverpod/latest/riverpod/Notifier/build.html
+
+---
+
+## About hooks
+
+This page explains what hooks are and how they are related to Riverpod.
+
+"Hooks" are utilities common from a separate package, independent from Riverpod:
+[flutter_hooks].  
+Although [flutter_hooks] is a completely separate package and does not have anything
+to do with Riverpod (at least directly), it is common to pair Riverpod
+and [flutter_hooks] together.
+
+## Should you use hooks?
+
+Hooks are a powerful tool, but they are not for everyone.  
+If you are a newcomer to Riverpod, **avoid using hooks**.
+
+Although useful, hooks are not necessary for Riverpod.  
+You shouldn't start using hooks because of Riverpod. Rather, you should start
+using hooks because you want to use hooks.
+
+Using hooks is a tradeoff. They can be great for producing robust and reusable
+code, but they are also a new concept to learn, and they can be confusing at first.
+Hooks aren't a core Flutter concept. As such, they will feel out of place in Flutter/Dart.
+
+## What are hooks?
+
+Hooks are functions used inside widgets. They are designed as an alternative
+to [StatefulWidget]s, to make logic more reusable and composable.
+
+Hooks are a concept coming from [React](https://reactjs.org/), and [flutter_hooks]
+is merely a port of the React implementation to Flutter.  
+As such, yes, hooks may feel a bit out of place in Flutter. Ideally,
+in the future we would have a solution to the problem that hooks solves,
+designed specifically for Flutter.
+
+If Riverpod's providers are for "global" application state, hooks are for
+local widget state. Hooks are typically used for dealing with stateful UI objects,
+such as [TextEditingController](https://api.flutter.dev/flutter/widgets/TextEditingController-class.html),
+[AnimationController](https://api.flutter.dev/flutter/animation/AnimationController-class.html).  
+They can also serve as a replacement to the "builder" pattern, replacing widgets
+such as [FutureBuilder](https://api.flutter.dev/flutter/widgets/FutureBuilder-class.html)/[TweenAnimatedBuilder](https://api.flutter.dev/flutter/widgets/TweenAnimationBuilder-class.html)
+by an alternative that does not involve "nesting" – drastically improving readability.
+
+In general, hooks are helpful for:
+
+- Forms
+- Animations
+- Reacting to user events
+- etc.
+
+As an example, we could use hooks to manually implement a fade-in animation,
+where a widget starts invisible and slowly appears.
+
+If we were to use [StatefulWidget], the code would look like this:
+
+```dart
+class FadeIn extends StatefulWidget {
+  const FadeIn({Key? key, required this.child}) : super(key: key);
+
+  final Widget child;
+
+  @override
+  StatecreateState() => _FadeInState();
+}
+
+class _FadeInState extends Statewith SingleTickerProviderStateMixin {
+  late final AnimationController animationController = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animationController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: animationController.value,
+          child: widget.child,
+        );
+      },
+    );
+  }
+}
+```
+
+Using hooks, the equivalent would be:
+
+```dart
+class FadeIn extends HookWidget {
+  const FadeIn({Key? key, required this.child}) : super(key: key);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // Create an AnimationController. The controller will automatically be
+    // disposed when the widget is unmounted.
+    final animationController = useAnimationController(
+      duration: const Duration(seconds: 2),
+    );
+
+    // useEffect is the equivalent of initState + didUpdateWidget + dispose.
+    // The callback passed to useEffect is executed the first time the hook is
+    // invoked, and then whenever the list passed as second parameter changes.
+    // Since we pass an empty const list here, that's strictly equivalent to `initState`.
+    useEffect(() {
+      // start the animation when the widget is first rendered.
+      animationController.forward();
+      // We could optionally return some "dispose" logic here
+      return null;
+    }, const []);
+
+    // Tell Flutter to rebuild this widget when the animation updates.
+    // This is equivalent to AnimatedBuilder
+    useAnimation(animationController);
+
+    return Opacity(
+      opacity: animationController.value,
+      child: child,
+    );
+  }
+}
+```
+
+There are a few interesting things to note in this code:
+
+- There is no memory leak. This code does not recreate a new `AnimationController` whenever the
+  widget rebuilds, and the controller is correctly released when the widget is unmounted.
+
+- It is possible to use hooks as many time as we want within the same widget.
+  As such, we can create multiple `AnimationController` if we want:
+
+  ```dart
+  @override
+  Widget build(BuildContext context) {
+    final animationController = useAnimationController(
+      duration: const Duration(seconds: 2),
+    );
+    final anotherController = useAnimationController(
+      duration: const Duration(seconds: 2),
+    );
+
+    ...
+  }
+  ```
+
+  This creates two controllers, without any sort of negative consequence.
+
+- If we wanted, we could refactor this logic into a separate reusable function:
+
+  ```dart
+  double useFadeIn() {
+    final animationController = useAnimationController(
+      duration: const Duration(seconds: 2),
+    );
+    useEffect(() {
+      animationController.forward();
+      return null;
+    }, const []);
+    useAnimation(animationController);
+    return animationController.value;
+  }
+  ```
+
+  We could then use this function inside our widgets, as long as that widget is a [HookWidget]:
+
+  ```dart
+  class FadeIn extends HookWidget {
+    const FadeIn({Key? key, required this.child}) : super(key: key);
+
+    final Widget child;
+
+    @override
+    Widget build(BuildContext context) {
+      final fade = useFadeIn();
+
+      return Opacity(opacity: fade, child: child);
+    }
+  }
+  ```
+
+  Note how our `useFadeIn` function is completely independent from our
+  `FadeIn` widget.  
+  If we wanted, we could use that `useFadeIn` function in a completely different
+  widget, and it would still work!
+
+## The rules of hooks
+
+Hooks comes with unique constraints:
+
+- They can only be used within the `build` method of a widget that extends [HookWidget]:
+
+  **Good**:
+
+  ```dart
+  class Example extends HookWidget {
+    @override
+    Widget build(BuildContext context) {
+      final controller = useAnimationController();
+      ...
+    }
+  }
+  ```
+
+  **Bad**:
+
+  ```dart
+  // Not a HookWidget
+  class Example extends StatelessWidget {
+    @override
+    Widget build(BuildContext context) {
+      final controller = useAnimationController();
+      ...
+    }
+  }
+  ```
+
+  **Bad**:
+
+  ```dart
+  class Example extends HookWidget {
+    @override
+    Widget build(BuildContext context) {
+      return ElevatedButton(
+        onPressed: () {
+          // Not _actually_ inside the "build" method, but instead inside
+          // a user interaction lifecycle (here "on pressed").
+          final controller = useAnimationController();
+        },
+        child: Text('click me'),
+      );
+    }
+  }
+  ```
+
+- They cannot be used conditionally or in a loop.
+
+  **Bad**:
+
+  ```dart
+  class Example extends HookWidget {
+    const Example({required this.condition, super.key});
+    final bool condition;
+    @override
+    Widget build(BuildContext context) {
+      if (condition) {
+        // Hooks should not be used inside "if"s/"for"s, ...
+        final controller = useAnimationController();
+      }
+      ...
+    }
+  }
+  ```
+
+For more information about hooks, see [flutter_hooks].
+
+## Hooks and Riverpod
+
+### Installation
+
+Since hooks are independent from Riverpod, it is necessary to install hooks
+separately. If you want to use them, installing [hooks_riverpod] is not
+enough. You will still need to add [flutter_hooks] to your dependencies.
+See ) for more information.
+
+### Usage
+
+In some cases, you may want to write a Widget that uses both hooks and Riverpod.
+But as you may have already noticed, both hooks and Riverpod provide their
+own custom widget base type: [HookWidget] and [ConsumerWidget].  
+But classes can only extend one superclass at a time.
+
+To solve this problem, you can use the [hooks_riverpod] package.
+This package provides a [HookConsumerWidget] class that combines both
+[HookWidget] and [ConsumerWidget] into a single type.  
+You can therefore subclass [HookConsumerWidget] instead of [HookWidget]:
+
+Alternatively, you can use the "builders" provided by both packages.  
+For example, we could stick to using `StatelessWidget`, and use both
+`HookBuilder` and `Consumer`.
+
+:::note
+This approach would work without using [hooks_riverpod]. Only [flutter_riverpod]
+is needed.
+:::
+
+If you like this approach, [hooks_riverpod] streamlines it by providing [HookConsumer],
+which is the combination of both builders in one:
+
+[hookwidget]: https://pub.dev/documentation/flutter_hooks/latest/flutter_hooks/HookWidget-class.html
+[hookconsumer]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/HookConsumer-class.html
+[hookconsumerwidget]: https://pub.dev/documentation/hooks_riverpod/latest/hooks_riverpod/HookConsumerWidget-class.html
+[consumerwidget]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ConsumerWidget-class.html
+[statefulwidget]: https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html
+[riverpod]: https://github.com/rrousselgit/riverpod
+[hooks_riverpod]: https://pub.dev/packages/hooks_riverpod
+[flutter_riverpod]: https://pub.dev/packages/flutter_riverpod
+[flutter_hooks]: https://github.com/rrousselGit/flutter_hooks
+
+---
+
+# Migration
+
+## Migrating from 2.0 to 3.0
+
+For the list of changes, please refer to the [What's new in Riverpod 3.0](whats_new) page.
+
+Riverpod 3.0 introduces a number of breaking changes that may require you to update your code.
+They should in general be relatively minor, but we recommend you to read this page carefully.
+
+:::info
+This migration is supposed to be smooth.  
+If there is anything that is unclear, or if you encountered a scenario that is difficult
+to migrate, please [open an issue](https://github.com/rrousselGit/riverpod/issues/new/choose).
+
+It is important to us that the migration is as smooth as possible, so we will do our best to help you, 
+improve the migration guide, or even include helpers to make the migration easier.
+:::
+
+## Automatic retry
+
+Riverpod 3.0 now [automatically retries](./whats_new.mdx#automatic-retry) failing providers by default.
+This means that if a provider fails to compute its value, it will automatically retry until it succeeds.
+
+In general, this is a good thing as it makes your app more resilient to transient errors.
+However, you may want to disable/customize this behavior in some cases.
+
+To disable automatic retry globally, you can do so on `ProviderContainer`/`ProviderScope`:
+
+```dart
+void main() {
+  runApp(
+    ProviderScope(
+      // Never retry any provider
+      retry: (retryCount, error) => null,
+      child: MyApp(),
+    ),
+  );
+}
+```
+
+```dart
+void main() {
+  final container = ProviderContainer(
+    // Never retry any provider
+    retry: (retryCount, error) => null,
+  );
+}
+```
+
+Alternatively, you can disable automatic retry on a per-provider basis by using the `retry` parameter of the provider:
+
+_[code snippet]_
+## Out of view providers are paused
+
+In Riverpod 3.0, [out of view providers are paused by default](./whats_new.mdx#listeners-inside-widgets-that-are-not-visible-are-now-paused).
+
+There is currently no way to disable this behavior globally, but you can control
+the pause behavior at the consumer level by using the [TickerMode] widget.
+
+```dart
+class MyWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return TickerMode(
+      enabled: true, // Never pause any descendant listener.
+      child: Consumer(
+        builder: (context, ref, child) {
+          // This "watch" will not follow the automatic pausing behavior
+          // until TickerMode is removed.
+          final value = ref.watch(myProvider);
+          return Text(value.toString());
+        },
+      ),
+    );
+  }
+}
+```
+
+## StateProvider, StateNotifierProvider, and ChangeNotifierProvider are moved to a new import
+
+In Riverpod 3.0, `StateProvider`, `StateNotifierProvider`, and `ChangeNotifierProvider` are considered "legacy".  
+They are not removed, but are no longer part of the main API. This is to discourage their use
+in favor of the new `Notifier` API.
+
+To keep using them, you need to change your imports to one of the following:
+
+```dart
+```
+
+## Providers now all use == to filter updates
+
+Before, Riverpod was inconsistent in how it filtered updates to providers.
+Some providers used `==` to filter updates, while others used `identical`.
+In Riverpod 3.0, [all providers now use `==` to filter updates](./whats_new.mdx#all-updateshouldnotify-now-use-).
+
+The most likely way for you to be impacted by this change is when using
+[StreamProvider]/[StreamNotifier], as now stream values will be filtered by `==`.
+If you need to, you can override `Notifier.updateShouldNotify` to customize the behavior.
+
+_[code snippet]_
+In the scenario where you didn't use a `Notifier`, you can refactor your provider in its notifier equivalent
+(Such as converting [StreamProvider] to [StreamNotifierProvider]).
+
+## ProviderObserver has its interface slightly changed
+
+For the sake of [mutations](./whats_new.mdx#mutations), 
+the [ProviderObserver] interface has changed slightly.
+
+Instead of two separate parameters for [ProviderContainer] and [ProviderBase], 
+a single `ProviderObserverContext` object is passed.
+This object contains both the container, provider, and extra information (such as the associated mutation).
+
+To migrate, you need to update all methods of your observers like so:
+
+```diff
+class MyObserver extends ProviderObserver {
+  @override
+-  void didAddProvider(ProviderBase provider, Object? value, ProviderContainer container) {
++  void didAddProvider(ProviderObserverContext context, Object? value) {
+    // ...
+  }
+}
+```
+
+## Simplified Ref and removed Ref subclasses
+
+For the sake of simplification, [Ref] has lost its type parameter, and all properties/methods that were
+using the type parameter have been moved to [Notifier]s.  
+
+Specifically, `ProviderRef.state`, `Ref.listenSelf` and `FutureProviderRef.future` should be replaced by
+`Notifier.state`, `Notifier.listenSelf` and `AsyncNotifier.future` respectively.
+
+_[code snippet]_
+Similarly, all [Ref] subclasses are removed (such as but not limited to `ProviderRef`, `FutureProviderRef`, etc).
+
+This primarily affects code-generation. Instead of `MyProviderRef`, you can now use `Ref` directly:
+
+```diff
+@riverpod
+-int example(ExampleRef ref) {
++int example(Ref ref) {
+  // ...
+}
+```
+
+## AutoDispose interfaces are removed.
+
+The auto-dispose feature is simplified. Instead of relying on a clone of all interfaces,
+interfaces are unified. In short, instead of `AutoDisposeProvider`, `AutoDisposeNotifier`, 
+etc, you now have `Provider`, `Notifier`, etc. The behavior is the same, but the API is simplified.
+
+To easily migrate, you can do a case-sensitive replace of `AutoDispose` to ` ` (empty string).
+
+## The family variant of Notifiers is removed
+
+In the same vein as the previous point, the family variant of Notifiers has been removed.
+Now, we only use `Notifier`/`AsyncNotifier`/`StreamNotifier`, and `FamilyNotifier`/... have been removed.
+
+To migrate, you will need to replace:
+- `FamilyNotifier` -> `Notifier`
+- `FamilyAsyncNotifier` -> `AsyncNotifier`
+- `FamilyStreamNotifier` -> `StreamNotifier`
+
+Then, you will need to:
+- Remove the parameter from the `build` method
+- Add a constructor on your Notifier
+
+An example of this migration is as follows:
+
+```diff
+final provider = NotifierProvider.family(CounterNotifier.new);
+
+-class CounterNotifier extends FamilyNotifier<int, String> {
++class CounterNotifier extends Notifier<int> {
++  CounterNotifier(this.arg);
++  final String arg;
+
+   @override
+-  int build(String arg) {
++  int build() {
+     // Use `arg` as needed
+      return 0;
+   }
+}
+```
+
+## Provider failures are now rethrown as ProviderExceptions
+
+In Riverpod 3.0, all provider failures are [rethrown as `ProviderException`s](./whats_new.mdx#when-reading-a-provider-results-in-an-exception-the-error-is-now-wrapped-in-a-providerexception). 
+This means that if a provider fails to compute its value, reading it will throw a `ProviderException` instead of the original error.
+
+This can impact you if you were relying on the original error type to handle specific errors.
+To migrate, you can catch the `ProviderException` and extract the original error from it:
+
+```diff
+try {
+  await ref.read(myProvider.future);
+-} on NotFoundException {
+-  // Handle NotFoundException
++} on ProviderException catch (e) {
++  if (e.exception is NotFoundException) {
++    // Handle NotFoundException
++  }
+}
+```
+
+:::info
+This is only necessary if you were explicitly relying on try/catch to handle such error.
+
+If you are using [AsyncValue] to check for errors, you don't need to change anything:
+
+```dart
+AsyncValue<int> value = ref.watch(myProvider);
+if (value.error is NotFoundException) {
+  // Handle NotFoundException
+  // This still works today
+}
+```
+:::
+
+[TickerMode]: https://api.flutter.dev/flutter/widgets/TickerMode-class.html
+[StreamProvider]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/StreamProvider-class.html
+[StreamNotifier]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/StreamNotifier-class.html
+[StreamNotifierProvider]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/StreamNotifierProvider.html
+[ProviderObserver]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderObserver-class.html
+[ProviderContainer]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderContainer-class.html
+[ProviderBase]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderBase-class.html
+[Ref]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Ref-class.html
+[Notifier]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Notifier-class.html
+[ProviderException]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderException-class.html
+
+---
+
+## ^0.13.0 to ^0.14.0
+
+With the release of version `0.14.0` of Riverpod, the syntax for using [StateNotifierProvider] changed
+(see https://github.com/rrousselGit/riverpod/issues/341 for the explanation).
+
+For the entire article, consider the following [StateNotifier]:
+
+```dart
+class MyModel {}
+
+class MyStateNotifier extends StateNotifier{
+  MyStateNotifier(): super(MyModel());
+}
+```
+
+## The changes
+
+- [StateNotifierProvider] takes an extra generic parameter, which should be
+  the type of the state of your [StateNotifier].
+
+  Before:
+
+  ```dart
+  final provider = StateNotifierProvider((ref) {
+    return MyStateNotifier();
+  });
+  ```
+
+  After:
+
+  ```dart
+  final provider = StateNotifierProvider((ref) {
+    return MyStateNotifier();
+  });
+  ```
+
+- to obtain the [StateNotifier], you should now read `myProvider.notifier` instead of just `myProvider`:
+
+  Before:
+
+  ```dart
+  Widget build(BuildContext context, ScopedReader watch) {
+    MyStateNotifier notifier = watch(provider);
+  }
+  ```
+
+  After:
+
+  ```dart
+  Widget build(BuildContext context, ScopedReader watch) {
+    MyStateNotifier notifier = watch(provider.notifier);
+  }
+  ```
+
+- to listen to the state of the [StateNotifier], you should now read `myProvider` instead of `myProvider.state`:
+
+  Before:
+
+  ```dart
+  Widget build(BuildContext context, ScopedReader watch) {
+    MyModel state = watch(provider.state);
+  }
+  ```
+
+  After:
+
+  ```dart
+  Widget build(BuildContext context, ScopedReader watch) {
+    MyModel state = watch(provider);
+  }
+  ```
+
+## Using the migration tool to automatically upgrade your projects to the new syntax
+
+With version 0.14.0 came the release of a command line tool for Riverpod,
+which can help you migrate your projects.
+
+### Installing the command line
+
+To install the migration tool, run:
+
+```sh
+dart pub global activate riverpod_cli
+```
+
+You should now be able to run:
+
+```sh
+riverpod --help
+```
+
+### Usage
+
+Now that the command line is installed, we can start using it.
+
+- First, open the project you want to migrate in your terminal.
+- **Do not** upgrade Riverpod.  
+  The migration tool will upgrade the version of Riverpod for you.
+- Make sure that your project does not contain errors.
+- Execute:
+  ```sh
+  riverpod migrate
+  ```
+
+The tool will then analyze your project and suggest changes. For example you may see:
+
+```diff
+Widget build(BuildContext context, ScopedReader watch) {
+-  MyModel state = watch(provider.state);
++  MyModel state = watch(provider);
+}
+
+Accept change (y = yes, n = no [default], A = yes to all, q = quit)? 
+```
+
+To accept the change, simply press <kbd>y</kbd>. Otherwise to reject it, press <kbd>n</kbd>.
+
+[statenotifierprovider]: https://pub.dev/documentation/hooks_riverpod/latest/legacy/StateNotifierProvider-class.html
+[statenotifier]: https://pub.dev/documentation/state_notifier/latest/state_notifier/StateNotifier-class.html
+
+---
+
+## ^0.14.0 to ^1.0.0
+
+After a long wait, the first stable version of Riverpod is finally released 👏
+
+To see the full list of changes, consult the [Changelog](https://pub.dev/packages/flutter_riverpod/changelog#100).  
+In this page, we will focus on how to migrate an existing Riverpod application
+from version 0.14.x to version 1.0.0.
+
+## Using the migration tool to automatically upgrade your project to the new syntax
+
+Before explaining the various changes, it is worth noting that Riverpod comes with
+a command-line tool to automatically migrate your project for you.
+
+### Installing the command line tool
+
+To install the migration tool, run:
+
+```sh
+dart pub global activate riverpod_cli
+```
+
+You should now be able to run:
+
+```sh
+riverpod --help
+```
+
+### Usage
+
+Now that the command line is installed, we can start using it.
+
+- First, open the project you want to migrate in your terminal.
+- **Do not** upgrade Riverpod.  
+  The migration tool will upgrade the version of Riverpod for you.
+
+  :::danger
+  Not upgrading Riverpod is important.  
+  The tool will not execute properly if you have already installed version 1.0.0.
+  As such, make sure that you are properly using an older version before starting the tool.
+  :::
+
+- Make sure that your project does not contain errors.
+- Execute:
+  ```sh
+  riverpod migrate
+  ```
+
+The tool will then analyze your project and suggest changes. For example you may see:
+
+```diff
+-Widget build(BuildContext context, ScopedReader watch) {
++Widget build(BuildContext context, Widget ref) {
+-  MyModel state = watch(provider);
++  MyModel state = ref.watch(provider);
+}
+
+Accept change (y = yes, n = no [default], A = yes to all, q = quit)?
+```
+
+To accept the change, simply press <kbd>y</kbd>. Otherwise to reject it, press <kbd>n</kbd>.
+
+## The changes
+
+Now that we've seen how to use the CLI to automatically upgrade your project,
+let's see in detail the changes necessary.
+
+### Syntax unification
+
+Version 1.0.0 of Riverpod focused on the unification of the syntax for
+interacting with providers.  
+Before, Riverpod had many similar yet different syntaxes for reading a provider,
+such as `ref.watch(provider)` vs `useProvider(provider)` vs `watch(provider)`.  
+With version 1.0.0, only one syntax remains: `ref.watch(provider)`. The
+others were removed.
+
+As such:
+
+- `useProvider` is removed in favor of `HookConsumerWidget`.
+
+  Before:
+
+  ```dart
+  class Example extends HookWidget {
+    @override
+    Widget build(BuildContext context) {
+      useState(...);
+      int count = useProvider(counterProvider);
+      ...
+    }
+  }
+  ```
+
+  After:
+
+  ```dart
+  class Example extends HookConsumerWidget {
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      useState(...);
+      int count = ref.watch(counterProvider);
+      ...
+    }
+  }
+  ```
+
+- The prototype of `ConsumerWidget`'s `build` and `Consumer`'s `builder` changed.
+ 
+  Before:
+
+  ```dart
+  class Example extends ConsumerWidget {
+    @override
+    Widget build(BuildContext context, ScopedReader watch) {
+      int count = watch(counterProvider);
+      ...
+    }
+  }
+
+  Consumer(
+    builder: (context, watch, child) {
+      int count = watch(counterProvider);
+      ...
+    }
+  )
+  ```
+
+  After:
+
+  ```dart
+  class Example extends ConsumerWidget {
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      int count = ref.watch(counterProvider);
+      ...
+    }
+  }
+
+  Consumer(
+    builder: (context, ref, child) {
+      int count = ref.watch(counterProvider);
+      ...
+    }
+  )
+  ```
+
+- `context.read` is removed in favor of `ref.read`.
+
+  Before:
+
+  ```dart
+  class Example extends StatelessWidget {
+    @override
+    Widget build(BuildContext context) {
+      SomeButton(
+        onPressed: () => context.read(provider.notifier).doSomething(),
+      );
+    }
+  }
+  ```
+
+  After:
+
+  ```dart
+  class Example extends ConsumerWidget {
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      SomeButton(
+        onPressed: () => ref.read(provider.notifier).doSomething(),
+      );
+    }
+  }
+  ```
+
+### StateProvider update
+
+[StateProvider] was updated to match [StateNotifierProvider].
+
+Before, doing `ref.watch(StateProvider)` returned a `StateController` instance.
+Now it only returns the state of the `StateController`.
+
+To migrate you have a few solutions.  
+If your code only obtained the state without modifying it, you can change from:
+
+```dart
+final provider = StateProvider<int>(...);
+
+Consumer(
+  builder: (context, ref, child) {
+    StateController<int> count = ref.watch(provider);
+
+    return Text('${count.state}');
+  }
+)
+```
+
+to:
+
+```dart
+final provider = StateProvider<int>(...);
+
+Consumer(
+  builder: (context, ref, child) {
+    int count = ref.watch(provider);
+
+    return Text('${count}');
+  }
+)
+```
+
+Alternatively you can use the new `StateProvider.state` to keep the old behavior.
+
+```dart
+final provider = StateProvider<int>(...);
+
+Consumer(
+  builder: (context, ref, child) {
+    StateController<int> count = ref.watch(provider.state);
+
+    return Text('${count.state}');
+  }
+)
+```
+
+[statenotifierprovider]: https://pub.dev/documentation/hooks_riverpod/latest/legacy/StateNotifierProvider-class.html
+[stateprovider]: https://pub.dev/documentation/hooks_riverpod/latest/legacy/StateProvider-class.html
+[statenotifier]: https://pub.dev/documentation/state_notifier/latest/state_notifier/StateNotifier-class.html
+
+---
+
+## From `ChangeNotifier`
+
+Within Riverpod, `ChangeNotifierProvider` is meant to be used to offer a smooth transition from
+pkg:provider.
+
+If you've just started a migration to pkg:riverpod, make sure you read the dedicated guide
+(see Quickstart).
+This article is meant for folks that already transitioned to riverpod, but want to move away from
+`ChangeNotifier`.
+
+All in all, migrating from `ChangeNotifier` to `AsyncNotifier` requires a
+paradigm shift, but it brings great simplification with the resulting migrated
+code.
+
+Take this (faulty) example:
+_[code snippet]_
+This implementation shows several weak design choices such as:
+- The usage of `isLoading` and `hasError` to handle different asynchronous cases
+- The need to carefully handle requests with tedious `try`/`catch`/`finally` expressions
+- The need to invoke `notifyListeners` at the right times to make this implementation work
+- The presence of inconsistent or possibly undesirable states, e.g. initialization with an empty list
+
+Note how this example has been crafted to show how `ChangeNotifier` can lead to faulty design choices
+for newbie developers; also, another takeaway is that mutable state might be way harder than it
+initially promises.
+
+`Notifier`/`AsyncNotifier`, in combination with immutable state, can lead to better design choices
+and less errors.
+
+Let's see how to migrate the above snippet, one step at a time, towards the newest APIs.
+
+## Start your migration
+First, we should declare the new provider / notifier: this requires some thought process which
+depends on your unique business logic.
+
+Let's summarize the above requirements:
+- State is represented with `List`, which obtained via a network call, with no parameters
+- State should *also* expose info about its `loading`, `error` and `data` state
+- State can be mutated via some exposed methods, thus a function isn't enough
+
+:::tip
+The above thought process boils down to answering the following questions:
+1. Are some side effects required?
+    - `y`: Use riverpod's class-based API
+    - `n`: Use riverpod's function-based API
+2. Does state need to be loaded asynchronously?
+    - `y`: Let `build` return a `Future`
+    - `n`: Let `build` simply return `T`
+3. Are some parameters required?
+    - `y`: Let `build` (or your function) accept them
+    - `n`: Let `build` (or your function) accept no extra parameters
+:::
+
+:::info
+If you're using codegen, the above thought process is enough.  
+There's no need to think about the right class names and their *specific* APIs.  
+`@riverpod` only asks you to write a class with its return type, and you're good to go.
+:::
+
+Technically, the best fit here is to define a `AsyncNotifier>`,
+which meets all the above requirements. Let's write some pseudocode first.
+
+_[code snippet]_
+:::tip
+Remember: use snippets in your IDE to get some guidance, or just to speed up your code writing.
+See .
+:::
+
+With respect with `ChangeNotifier`'s implementation, we don't need to declare `todos` anymore;
+such variable is `state`, which is implicitly loaded with `build`.
+
+Indeed, riverpod's notifiers can expose *one* entity at a time.
+
+:::tip
+Riverpod's API is meant to be granular; nonetheless, when migrating, you can still define a custom
+entity to hold multiple values. Consider using [Dart 3's records](https://dart.dev/language/records)
+to smooth out the migration at first.
+:::
+
+### Initialization
+Initializing a notifier is easy: just write initialization logic inside `build`.
+We can now get rid of the old `_init` function.
+
+_[code snippet]_
+With respect of the old `_init`, the new `build` isn't missing anything: there is no need to
+initialize variables such as `isLoading` or `hasError` anymore.
+
+Riverpod will automatically translate any asynchronous provider, via exposing an `AsyncValue>`
+and handles the intricacies of asynchronous state way better than what two simple boolean flags can do.
+
+Indeed, any `AsyncNotifier` effectively makes writing additional `try`/`catch`/`finally` an anti-pattern
+for handling asynchronous state.
+
+### Mutations and Side Effects
+Just like initialization, when performing side effects there's no need to manipulate boolean flags
+such as `hasError`, or to write additional `try`/`catch`/`finally` blocks.
+
+Below, we've cut down all the boilerplate and successfully fully migrated the above example:
+_[code snippet]_
+:::tip
+Syntax and design choices may vary, but in the end we just need to write our request and update
+state afterwards. See Providers.
+:::
+
+## Migration Process Summary
+
+Let's review the whole migration process applied above, from a operational point of view.
+
+1. We've moved the initialization, away from a custom method invoked in a constructor, to `build`
+2. We've removed `todos`, `isLoading` and `hasError` properties: internal `state` will suffice
+3. We've removed any `try`-`catch`-`finally` blocks: returning the future is enough
+4. We've applied the same simplification on the side effects (`addTodo`)
+5. We've applied the mutations, via simply reassign `state`
+
+---
+
+## From `StateNotifier`
+
+Along with [Riverpod 2.0](https://pub.dev/packages/flutter_riverpod/changelog#200), new classes
+were introduced: `Notifier` / `AsyncNotifier`.
+`StateNotifier` is now discouraged in favor of those new APIs.
+
+This page shows how to migrate from the deprecated `StateNotifier` to the new APIs.
+
+The main benefit introduced by `AsyncNotifier` is a better `async` support; indeed,
+`AsyncNotifier` can be thought as a `FutureProvider` which can expose ways to be modified from the UI.
+
+Furthermore, the new `(Async)Notifier`s:
+
+- Expose a `Ref` object inside its class
+- Offer similar syntax between codegen and non-codegen approaches
+- Offer similar syntax between their sync and async versions
+- Move away logic from Providers and centralize it into the Notifiers themselves
+
+Let's see how to define a `Notifier`, how it compares with `StateNotifier` and how to migrate
+the new `AsyncNotifier` for asynchronous state.
+
+## New syntax comparison
+
+Be sure to know how to define a `Notifier` before diving into this comparison.
+See Providers.
+
+Let's write an example, using the old `StateNotifier` syntax:
+_[code snippet]_
+Here's the same example, built with the new `Notifier` APIs, which roughly translates to:
+_[code snippet]_
+Comparing `Notifier` with `StateNotifier`, one can observe these main differences:
+
+- `StateNotifier`'s reactive dependencies are declared in its provider, whereas `Notifier`
+  centralizes this logic in its `build` method
+- `StateNotifier`'s whole initialization process is split between its provider and its constructor,
+  whereas `Notifier` reserves a single place to place such logic
+- Notice how, as opposed to `StateNotifier`, no logic is ever written into a `Notifier`'s constructor
+
+Similar conclusions can be made with `AsyncNotifier`, `Notifier`'s asynchronous equivalent.
+
+## Migrating asynchronous `StateNotifier`s
+
+The main appeal of the new API syntax is an improved DX on asynchronous data.  
+Take the following example:
+
+_[code snippet]_
+Here's the above example, rewritten with the new `AsyncNotifier` APIs:
+
+_[code snippet]_
+`AsyncNotifier`, just like `Notifier`, brings a simpler and more uniform API.
+Here, it's easy to see `AsyncNotifier` as a `FutureProvider` with methods.
+
+`AsyncNotifier` comes with a set of utilities and getters that `StateNotifier` doesn't have, such as e.g.
+[`future`](https://pub.dev/documentation/riverpod/latest/riverpod/AsyncNotifier/future.html)
+and [`update`](https://pub.dev/documentation/riverpod/latest/riverpod/AsyncNotifier/update.html).
+This enables us to write much simpler logic when handling asynchronous mutations and side-effects.
+See also Providers.
+:::tip
+Migrating from `StateNotifier>` to a `AsyncNotifier` boils down to:
+
+- Putting initialization logic into `build`
+- Removing any `catch`/`try` blocks in initialization or in side effects methods
+- Remove any `AsyncValue.guard` from `build`, as it converts `Future`s into `AsyncValue`s
+:::
+
+### Advantages
+
+After these few examples, let's now highlight the main advantages of `Notifier` and `AsyncNotifier`:
+- The new syntax should feel way simpler and more readable, especially for asynchronous state
+- New APIs are likely to have less boilerplate code in general
+- Syntax is now unified, no matter the type of provider you're writing, enabling code generation
+(see About Code Generation)
+
+Let's go further down and highlight more differences and similarities.
+
+## Explicit `.family` and `.autoDispose` modifications
+
+Another important difference is how families and auto dispose is handled with the new APIs.
+
+Modifications are explicitly stated inside the class; any parameters are directly injected in the
+`build` method, so that they're available to the initialization logic.  
+This should bring better readability, more conciseness and overall less mistakes.
+
+Take the following example, in which a `StateNotifierProvider.family` is being defined.
+_[code snippet]_
+`BugsEncounteredNotifier` feels... heavy / hard to read.  
+Let's take a look at its migrated `AsyncNotifier` counterpart:
+
+_[code snippet]_
+Its migrated counterpart should feel like a light read.
+
+:::info
+`(Async)Notifier`'s `.family` parameters are available via `this.arg` (or `this.paramName` when using codegen)
+:::
+
+## Lifecycles have a different behavior
+
+Lifecycles between `Notifier`/`AsyncNotifier` and `StateNotifier` differ substantially.
+
+This example showcases - again - how the old API have sparse logic:
+
+_[code snippet]_
+Here, if `durationProvider` updates, `MyNotifier` _disposes_: its instance is then re-instantiated
+and its internal state is then re-initialized.  
+Furthermore, unlike every other provider, the `dispose` callback is to be defined
+in the class, separately.  
+Finally, it is still possible to write `ref.onDispose` in its _provider_, showing once again how
+sparse the logic can be with this API; potentially, the developer might have to look into eight (8!)
+different places to understand this Notifier behavior!
+
+These ambiguities are solved with `Riverpod 2.0`.
+
+### Old `dispose` vs `ref.onDispose`
+`StateNotifier`'s `dispose` method refers to the dispose event of the notifier itself, aka it's a
+callback that gets called *before disposing of itself*.
+
+`(Async)Notifier`s don't have this property, since *they don't get disposed of on rebuild*; only
+their *internal state* is.  
+In the new notifiers, dispose lifecycles are taken care of in only _one_ place, via `ref.onDispose`
+(and others), just like any other provider.
+This simplifies the API, and hopefully the DX, so that there is only _one_ place to look at to
+understand lifecycle side-effects: its `build` method.
+
+Shortly: to register a callback that fires before its *internal state* rebuilds, we can use
+`ref.onDispose` like every other provider.
+
+You can migrate the above snippet like so:
+
+_[code snippet]_
+In this last snippet there sure is some simplification, but there's still an open problem: we
+are now unable to understand whether or not our notifiers are still alive while performing `update`.  
+This might arise an unwanted `StateError`s.
+
+### No more `mounted`
+This happens because `(Async)Notifier`s lacks a `mounted` property, which was available on
+`StateNotifier`.  
+Considering their difference in lifecycle, this makes perfect sense; while possible, a `mounted`
+property would be misleading on the new notifiers: `mounted` would *almost always* be `true`.
+
+While it would be possible to craft a [custom workaround](https://github.com/rrousselGit/riverpod/issues/1879#issuecomment-1303189191),
+it's recommended to work around this by canceling the asynchronous operation.
+
+Canceling an operation can be done with a custom [Completer](https://api.flutter.dev/flutter/dart-async/Completer-class.html),
+or any custom derivative.
+
+For example, if you're using `Dio` to perform network requests, consider using a [cancel token](https://pub.dev/documentation/dio/latest/dio/CancelToken-class.html)
+(see also Auto Dispose).
+
+Therefore, the above example migrates to the following:
+_[code snippet]_
+## Mutations APIs are the same as before
+
+Up until now we've shown the differences between `StateNotifier` and the new APIs.  
+Instead, one thing `Notifier`, `AsyncNotifier` and `StateNotifier` share is how their states
+can be consumed and mutated.
+
+Consumers can obtain data from these three providers with the same syntax, which is great in case
+you're migrating away from `StateNotifier`; this applies for notifiers methods, too.
+
+_[code snippet]_
+## Other migrations
+
+Let's explore the less-impactful differences between `StateNotifier` and `Notifier` (or `AsyncNotifier`)
+
+### From `.addListener` and `.stream`
+
+`StateNotifier`'s `.addListener` and `.stream` can be used to listen for state changes.
+These two APIs are now to be considered outdated.
+
+This is intentional due to the desire to reach full API uniformity with `Notifier`, `AsyncNotifier` and other providers.  
+Indeed, using a `Notifier` or an `AsyncNotifier` shouldn't be any different from any other provider.
+
+Therefore this:
+_[code snippet]_
+Becomes this:
+_[code snippet]_
+In a nutshell: if you want to listen to a `Notifier`/`AsyncNotifier`, just use `ref.listen`.
+See Refs.
+
+### From `.debugState` in tests
+
+`StateNotifier` exposes `.debugState`: this property is used for pkg:state_notifier users to enable
+state access from outside the class when in development mode, for testing purposes.
+
+If you're using `.debugState` to access state in tests, chances are that you need to drop this
+approach.
+
+`Notifier` / `AsyncNotifier` don't have a `.debugState`; instead, they directly expose `.state`,
+which is `@visibleForTesting`.
+
+:::danger
+AVOID accessing `.state` from tests; if you have to, do it _if and only if_ you had already have
+a `Notifier` / `AsyncNotifier` properly instantiated;
+then, you could access `.state` inside tests freely.
+
+Indeed, `Notifier` / `AsyncNotifier` _should not_ be instantiated by hand; instead, they should be
+interacted with by using its provider: failing to do so will *break* the notifier,
+due to ref and family args not being initialized.
+:::
+
+Don't have a `Notifier` instance?  
+No problem, you can obtain one with `ref.read`, just like you would read its exposed state:
+
+_[code snippet]_
+Learn more about testing in its dedicated guide. See Testing.
+
+### From `StateProvider`  
+
+`StateProvider` was exposed by Riverpod since its release, and it was made to save a few LoC for
+simplified versions of `StateNotifierProvider`.  
+Since `StateNotifierProvider` is deprecated, `StateProvider` is to be avoided, too.  
+Furthermore, as of now, there is no `StateProvider` equivalent for the new APIs.
+
+Nonetheless, migrating from `StateProvider` to `Notifier` is simple.
+
+This:
+_[code snippet]_
+Becomes:
+_[code snippet]_
+Even though it costs us a few more LoC, migrating away from `StateProvider` enables us to
+archive `StateNotifier`.
+
+---
+
+# What's New
+
+## What's new in Riverpod 3.0
+
+Welcome to Riverpod 3.0!  
+This update includes many long-due features, bug fixes, and simplifications of the API.
+
+This version is a transition period toward a simpler, unified Riverpod.  
+
+:::caution
+This version contains a few life-cycle changes. Those could break your app in subtle ways. Upgrade carefully.  
+For the migration guide, please refer to the [migration page](3.0_migration).
+:::
+
+Some of the key highlights include:
+
+- [Offline persistence (experimental)](#offline-persistence-experimental) - Providers can now opt-in to be persisted to a database
+- [Mutations (experimental)](#mutations-experimental) - A new mechanism to enable interfaces to react to side-effects
+- [Automatic retry](#automatic-retry) - Providers now refresh when they fail, with exponential backoff
+- [`Ref.mounted`](#refmounted) - Similar to `BuildContext.mounted`, but for `Ref`.
+- [Generic support (code-generation)](#generic-support-code-generation) - Generated providers can now define type parameters
+- [Pause/Resume support](#pauseresume-support) - Temporarily pause a listener when using `ref.listen`
+- [Unification of the Public APIs](#unification-of-the-public-apis) - Behaviors are unified and duplicate interfaces are fused
+- [Provider life-cycle changes](#provider-life-cycle-changes) - Slight tweaks to how providers behave, to better fit modern code
+- [New testing utilities](#new-testing-utilities):
+  - [`ProviderContainer.test`](#providercontainertest) - A test util that creates a container and automatically disposes it after the test ends.
+  - [`NotifierProvider.overrideWithBuild`](#notifierprovideroverridewithbuild) - A way to mock only `Notifier.build`, without mocking the whole notifier.
+  - [`Future/StreamProvider.overrideWithValue`](#futurestreamprovideroverridewithvalue) - The old utilities are back
+  - [`WidgetTester.container`](#widgettestercontainer) - A helper method to obtain the `ProviderContainer` inside widget tests
+- [Statically safe scoping](#statically-safe-scoping-code-generation-only) - New lint rules are added to detect when an override is missing
+
+## Offline persistence (experimental)
+
+:::info
+This feature is experimental and not yet stable.
+It is usable, but the API may change in breaking ways without a major version bump.
+:::
+
+Offline persistence is a new feature that enables caching a provider locally on the device.
+Then, when the application is closed and reopened, the provider can be restored from the cache.  
+Offline persistence is opt-in, and supported by all "Notifier" providers,
+and regardless of if you use code generation or not.
+
+Riverpod only includes interfaces to interact with a database. It does not include a database itself.
+You can use any database you want, as long as it implements the interfaces.  
+An official package for SQLite is maintained: [riverpod_sqflite](https://pub.dev/packages/riverpod_sqflite).
+
+As a short demo, here's how you can use offline persistence:  
+
+_[code snippet]_
+## Mutations (experimental)
+
+:::info
+This feature is experimental and not yet stable.
+It is usable, but the API may change in breaking ways without a major version bump.
+:::
+
+A new feature called "mutations" is introduced in Riverpod 3.0.  
+This feature solves two problems:
+- It empowers the UI to react to "side-effects" (such as form submissions, button clicks, etc),
+  to enable it to show loading/success/error messages.
+  Think "Show a toast when a form is submitted successfully".
+- It solves an issue where `onPressed` callbacks combined with [Ref.read] and Auto Dispose
+  could cause providers to be disposed while a side-effect is still in progress.
+
+The TL;DR is, a new [Mutation] object is added. It is declared as a top-level final variable,
+like providers:
+
+```dart
+final addTodoMutation = Mutation<void>();
+```
+
+After that, your UI can use `ref.listen`/`ref.watch` to listen to the state of mutations:
+
+```dart
+class AddTodoButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Listen to the status of the "addTodo" side-effect
+    final addTodo = ref.watch(addTodoMutation);
+
+    return switch (addTodo) {
+      // No side-effect is in progress
+      // Let's show a submit button
+      MutationIdle() => ElevatedButton(
+        // Trigger the side-effect on click
+        onPressed: () {
+          // TODO see explanation after the code snippet
+        },
+        child: const Text('Submit'),
+      ),
+      // The side-effect is in progress. We show a spinner
+      MutationPending() => const CircularProgressIndicator(),
+      // The side-effect failed. We show a retry button
+      MutationError() => ElevatedButton(
+        onPressed: () {
+          // TODO see explanation after the code snippet
+        },
+        child: const Text('Retry'),
+      ),
+      // The side-effect was successful. We show a success message
+      MutationSuccess() => const Text('Todo added!'),
+    };
+  }
+}
+```
+
+Last but not least, inside our `onPressed` callback, we can trigger our side-effect as
+followed:
+
+```dart
+onPressed: () {
+  addTodoMutation.run(ref, (tsx) async {
+    // This is where we run our side-effect.
+    // Here, we typically obtain a Notifier and call a method on it.
+    await tsx.get(todoListProvider.notifier).addTodo('New Todo');
+  });
+}
+```
+
+:::note
+Note how we called [tsx.get] here instead of [Ref.read].  
+This is a feature unique to mutations. That [tsx.get] obtains the state of a provider,
+but keep it alive until the mutation is completed.
+:::
+
+## Automatic retry
+
+Starting 3.0, providers that fail during initialization will automatically retry.
+The retry is done with an exponential backoff, and the provider will be retried
+until it succeeds or is disposed. This helps when an operation fails due to a temporary issue, such as a lack of network connection.
+
+The default behavior retries any error, and starts with a 200ms delay that
+doubles after each retry up to 6.4 seconds.  
+This can be customized for all providers on [ProviderContainer]/[ProviderScope] by passing a `retry` parameter:
+
+```dart
+void main() {
+  runApp(
+    ProviderScope(
+      // You can customize the retry logic, such as to skip
+      // specific errors or add a limit to the number of retries
+      // or change the delay
+      retry: (retryCount, error) {
+        if (error is SomeSpecificError) return null;
+        if (retryCount > 5) return null;
+
+        return Duration(seconds: retryCount * 2);
+      },
+      child: MyApp(),
+    ),
+  );
+}
+```
+
+```dart
+void main() {
+  final container = ProviderContainer(
+    // You can customize the retry logic, such as to skip
+    // specific errors or add a limit to the number of retries
+    // or change the delay
+    retry: (retryCount, error) {
+      if (error is SomeSpecificError) return null;
+      if (retryCount > 5) return null;
+
+      return Duration(seconds: retryCount * 2);
+    },
+  );
+}
+```
+
+Alternatively, this can be configured on a per-provider basis by passing a `retry` parameter to the provider constructor:
+
+_[code snippet]_
+## `Ref.mounted`
+
+The long-awaited `Ref.mounted` is finally here! It is similar to `BuildContext.mounted`, but for `Ref`.
+
+You can use it to check if a provider is still mounted after an async operation:
+
+_[code snippet]_
+For this to work, quite a few life-cycle changes were necessary.  
+Make sure to read the [life-cycle changes](#provider-life-cycle-changes) section.
+
+## Generic support (code-generation)
+
+When using code generation, you can now define type parameters for your generated providers.
+Type parameters work like any other provider parameter, and need to be passed
+when watching the provider.
+
+```dart
+@riverpod
+T multiply(T a, T b) {
+  return a * b;
+}
+
+// ...
+
+int integer = ref.watch(multiplyProvider<int>(2, 3));
+double decimal = ref.watch(multiplyProvider<double>(2.5, 3.5));
+```
+
+## Pause/Resume support
+
+In 2.0, Riverpod already had some form of pause/resume support, but it was fairly limited.
+With 3.0, all `ref.listen` listeners can be manually paused/resumed on demand:
+
+```dart
+final subscription = ref.listen(
+  todoListProvider,
+  (previous, next) {
+    // Do something with the new value
+  },
+);
+
+subscription.pause();
+subscription.resume();
+```
+
+At the same time, Riverpod now pauses providers in various situations:
+- When a provider is no-longer visible, it is paused
+  (Based off [TickerMode]).
+- When a provider rebuilds, its subscriptions are paused until the rebuild completes.
+- When a provider is paused, all of its subscriptions are paused too.
+
+See the [life-cycle changes](#provider-life-cycle-changes) section for more details.
+
+## Unification of the Public APIs
+
+One goal of Riverpod 3.0 is to simplify the API. This includes:
+- Highlighting what is recommended and what is not
+- Removing needless interface duplicates
+- Making sure all functionalities function in a consistent way
+
+For this sake, a few changes were made:
+
+### [StateProvider]/[StateNotifierProvider] and [ChangeNotifierProvider] are discouraged and moved to a different import
+
+Those providers are not removed, but simply moved to a different import.
+Instead of:
+
+```dart
+```
+You should now use:
+```dart
+```
+
+This is to highlight that those providers are not recommended anymore.  
+At the same time, those are preserved for backward compatibility.
+
+### AutoDispose interfaces are removed
+
+No, the "auto-dispose" feature isn't removed. This only concerns the interfaces.
+In 2.0, all providers, Refs and Notifiers were duplicated for the sake of auto-dispose (
+`Ref` vs `AutoDisposeRef`, `Notifier` vs `AutoDisposeNotifier`, etc).
+This was done for the sake of having a compilation error in some edge-cases, but came
+at the cost of a worse API.
+
+In 3.0, the interfaces are unified, and the previous compilation error is now implemented
+as a lint rule (using [riverpod_lint]). 
+What this means concretely is that you can replace all references to
+`AutoDisposeNotifier` with `Notifier`. The behavior of your code should not change.
+
+```diff
+final provider = NotifierProvider.autoDispose(
+  MyNotifier.new,
+);
+
+- class MyNotifier extends AutoDisposeNotifier<int> {
++ class MyNotifier extends Notifier<int> {
+}
+```
+
+### "FamilyNotifier" and "Notifier" are fused
+
+Similarly to the previous point, the `FamilyNotifier` and `Notifier` interfaces
+are now fused.
+
+Long story short, instead of:
+
+```dart
+final provider = NotifierProvider.family(
+  MyNotifier.new,
+);
+
+class CounterNotifier extends FamilyNotifier<int, Argument> {
+  @override
+  int build(Argument arg) => 0;
+}
+```
+
+We now do:
+
+```dart
+final provider = NotifierProvider.family(
+  CounterNotifier.new,
+);
+
+class CounterNotifier extends Notifier<int> {
+  CounterNotifier(this.arg);
+  final Argument arg;
+  @override
+  int build() => 0;
+}
+```
+
+This means that instead of `Notifier`+`FamilyNotifier`+`AutoDisposeNotifier`+`AutoDisposeFamilyNotifier`,
+we always use the `Notifier` class.
+
+This change has no impact on code-generation.
+
+### One `Ref` to rule them all
+
+In Riverpod 2.0, each provider came with its own [Ref] subclass (`FutureProviderRef`, `StreamProviderRef`, etc).  
+Some `Ref` had `state` property, some a `future`, or a `notifier`, etc. 
+Although useful, this was a lot of complexity for not much gain. One of the reasons
+for that is because [Notifier]s already have the extra properties it had,
+so the interfaces were redundant.
+
+In 3.0, `Ref` is unified. No more generic parameter such as `Ref`,
+no more `FutureProviderRef`. We only have one thing: `Ref`.
+What this means in practice is, the syntax for generated providers is simplified:
+
+```diff
+-Example example(ExampleRef ref) {
++Example example(Ref ref) {
+  return Example();
+}
+```
+
+:::info
+This does not concern [WidgetRef], which is intact.  
+[Ref] and [WidgetRef] are two different things.
+:::
+
+### All `updateShouldNotify` now use `==`
+
+`updateShouldNotify` is a method that is used to determine if a provider should
+notify its listeners when a state change occurs. 
+But in 2.0, the implementation of this method varied quite a bit between providers.
+Some providers used `==`, some `identical`, and some more complex logic.
+
+Starting 3.0, all providers use `==` to filter notifications.
+
+This can impact you in a few ways:
+- Some of your providers may not notify their listeners anymore
+  in certain situations.
+- Some listeners may be notified more often than before.
+- If you have a large data class that overrides `==`, you may see a small
+  performance impact.
+
+The most common case where you will be impacted is when using [StreamProvider]/[StreamNotifier],
+as events of the stream are now filtered using `==`.
+
+If you are impacted by those changes, you can override `updateShouldNotify` to
+use a custom implementation:
+
+_[code snippet]_
+## Provider life-cycle changes
+
+### Refs and Notifiers can no-longer be interacted with after they have been disposed
+
+In 2.0, in some edge-cases you could still interact with things like [Ref] or [Notifier]
+after they were disposed. This was not intended and caused various severe bugs.
+
+In 3.0, Riverpod will throw an error if you try to interact with a disposed Ref/Notifier.
+
+You can use [Ref.mounted] to check if a Ref/Notifier is still usable.
+
+```dart
+final provider = FutureProvider<int>((ref) async {
+  await Future.delayed(Duration(seconds: 1));
+  // Abort the provider if it has been disposed during the await.
+  // You can throw whatever you want and ignore this exception in your error reporting tools.
+  if (!ref.mounted) throw MyException();
+  return 42;
+});
+```
+
+### When reading a provider results in an exception, the error is now wrapped in a ProviderException
+
+Before, if a provider threw an error, Riverpod would sometimes rethrow that error directly:
+
+_[code snippet]_
+In 3.0, this is changed. Instead, the error will be encapsulated in a `ProviderException`
+that contains both the original error and its stack trace.
+
+:::info
+`AsyncValue.error`, `ref.listen(..., onError: ...)` and [ProviderObserver]s  are unaffected by this change,
+and will still receive the unaltered error.
+:::
+
+This has multiple benefits:
+- Debugging is improved, as we have a much better stack trace
+- It is now possible to determine if a provider failed, or
+  if it is in error state because it depends on another provider that failed.
+
+For example, a [ProviderObserver] can use this to avoid logging the same error twice:
+
+```dart
+class MyObserver extends ProviderObserver {
+  @override
+  void providerDidFail(ProviderObserverContext context, Object error, StackTrace stackTrace) {
+    if (error is ProviderException) {
+      // The provider didn't fail directly, but instead depends on a failed provider.
+      // The error was therefore already logged.
+      return;
+    }
+
+    // Log the error
+    print('Provider failed: $error');
+  }
+}
+```
+
+This is used internally by Riverpod in its automatic retry mechanism. The default automatic retry
+ignores `ProviderException`s:
+
+```dart
+ProviderContainer(
+  // Example of the default retry behavior
+  retry: (retryCount, error) {
+    if (error is ProviderException) return null;
+
+    // ...
+  },
+);
+```
+
+### Listeners inside widgets that are not visible are now paused
+
+Now that Riverpod has a way to [pause listeners](#pauseresume-support), Riverpod uses that to
+natively pauses listeners when the widget is not visible. In practice what this means is: Providers that are not used by the visible widget tree
+are paused.
+
+As a concrete example, consider an application with two routes:
+- A home page, listening to a websocket using a provider
+- A settings page, which does not rely on that websocket
+
+In typical applications, a user first opens the home page _and then_ opens the settings page.
+This means that while the settings page is open, the homepage is also open, but not visible.
+
+In 2.0, the homepage would actively keep listening to the websocket.  
+In 3.0, the websocket provider will instead be paused, possibly saving resources.
+
+**How it works:**  
+Riverpod relies on [TickerMode] to determine if a widget is visible or not. And when
+false, all listeners of a [Consumer] are paused.
+
+It also means that you can rely on [TickerMode] yourself to manually control
+the pause behavior of your consumers. You can voluntarily set the value to true/false
+to forcibly resume/pause listeners:
+
+```dart
+class MyWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return TickerMode(
+      enabled: false, // This will pause the listeners
+      child: Consumer(
+        builder: (context, ref, child) {
+          // This "watch" will be paused
+          // until TickerMode is set to true
+          final value = ref.watch(myProvider);
+          return Text(value.toString());
+        },
+      ),
+    );
+  }
+}
+```
+
+### If a provider is only used by paused providers, it is paused too
+
+Riverpod 2.0 already had some form of pause/resume support. But it was limited and failed 
+to cover some edge-cases.  
+Consider:
+
+_[code snippet]_
+In 2.0, if you were to call `ref.read` once on this provider,
+the state of the provider would be maintained, but 'paused' will be printed. This is because
+calling `ref.read` does not "listen" to the provider. And since the provider is not "listened"
+to, it is paused.
+
+This is useful to pause providers that are currently not used! 
+The problem is that in many cases, this optimization does not work.  
+For example, your provider could be used indirectly through another provider.
+
+_[code snippet]_
+In this scenario, if we click on the button once,
+then `anotherProvider` will start listening to our `exampleProvider`. But `anotherProvider`
+is no-longer used and will be paused. Yet `exampleProvider` will not be paused,
+because it thinks that it is still being used.  
+As such, clicking on the button will not print 'paused' anymore. 
+
+In 3.0, this is fixed. If a provider is only used by paused providers, it is paused too.
+
+### When a provider rebuilds, its previous subscriptions now are kept until the rebuild completes
+
+In 2.0, there was a known inconvenience when using asynchronous providers
+combined with 'auto-dispose'.
+
+Specifically, when an asynchronous provider watches an auto-dispose provider
+after an `await`, the "auto dispose" could be triggered unexpectedly.
+
+Consider:  
+_[code snippet]_
+In you run this on [Dartpad](https://dartpad.dev/), you will see that its prints:
+
+```
+// First print
+Before async gap
+after async gap
+0
+---- // Second and after prints
+paused
+Before async gap
+disposed // The 'autoDispose' provider was disposed during the async gap!
+after async gap
+0
+----
+paused
+Before async gap
+disposed
+after async gap
+0
+----
+... // And so on every second
+```
+
+As you can see, this consistently prints `0` every second,
+because the `autoDispose` provider repeatedly gets disposed during the async gap. 
+A workaround was to move the `ref.watch` call before the `await` statement.
+But this is error prone, not very intuitive, and not always possible.
+
+In 3.0, this is fixed by delaying the disposal of listeners.  
+When a provider rebuilds, instead of immediately removing all of its listeners,
+it [pauses](#pauseresume-support) them.
+
+The exact same code will now instead print:
+
+```
+// First print
+Before async gap
+after async gap
+0
+----
+paused
+Before async gap
+after async gap
+resumed
+1
+----
+paused
+Before async gap
+after async gap
+resumed
+2
+----
+... // And so on every second
+```
+
+### Exceptions in providers are rethrown as a `ProviderException`.
+
+For the sake of differentiating between "a provider failed" from "a provider is depending on a failed provider",
+Riverpod 3.0 now wraps exceptions in a `ProviderException` that contains the original.
+
+This means that if you catch errors in your providers, you will need to update your try/catch to inspect
+the content of `ProviderException`:
+
+```dart
+try {
+  ref.watch(failingProvider);
+} on ProviderException catch (e) {
+  switch (e.exception) {
+    case SomeSpecificError():
+      // Handle the specific error
+    default:
+      // Handle other errors
+      rethrow;
+  }
+}
+```
+
+## New testing utilities
+
+### `ProviderContainer.test`
+
+In 2.0, typical testing code would rely on a custom-made utility called `createContainer`.  
+In 3.0, this utility is now part of Riverpod, and is called `ProviderContainer.test`.
+It creates a new container, and automatically disposes it after the test ends.
+
+```dart
+void main() {
+  test('My test', () {
+    final container = ProviderContainer.test();
+    // Use the container
+    // ...
+    // The container is automatically disposed after the test ends
+  });
+}
+```
+
+You can safely do a global search-and-replace for `createContainer` to `ProviderContainer.test`.
+
+### `NotifierProvider.overrideWithBuild`
+
+It is now possible to mock only the `Notifier.build` method, without mocking the whole notifier.
+This is useful when you want to initialize your notifier with a specific state, but still want to
+use the original implementation of the notifier.
+
+_[code snippet]_
+### `Future/StreamProvider.overrideWithValue`
+
+A while back, `FutureProvider.overrideWithValue` and `StreamProvider.overrideWithValue`
+were removed "temporarily" from Riverpod.  
+They are finally back!
+
+_[code snippet]_
+### `WidgetTester.container`
+
+A simple way to access the `ProviderContainer` in your widget tree.
+
+```dart
+void main() {
+  testWidgets('can access a ProviderContainer', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: MyWidget()));
+    ProviderContainer container = tester.container();
+  });
+}
+```
+
+See the [WidgetTester.container] extension for more information.
+
+## Custom ProviderListenables
+
+It is now possible to create custom [ProviderListenable]s in Riverpod 3.0.
+This is doable using [SyncProviderTransformerMixin].
+
+The following example implements a variable of `provider.select`,
+where the callback returns a boolean instead of the selected value.
+
+```dart
+final class Wherewith SyncProviderTransformerMixin{
+  Where(this.source, this.where);
+  @override
+  final ProviderListenablesource;
+  final bool Function(T previous, T value) where;
+
+  @override
+  ProviderTransformertransform(
+    ProviderTransformerContextcontext,
+  ) {
+     return ProviderTransformer(
+       initState: (_) => context.sourceState.requireValue,
+       listener: (self, previous, next) {
+         if (where(previous, next))
+           self.state = next;
+       },
+     );
+  }
+}
+
+extensionon ProviderListenable{
+  ProviderListenablewhere(
+    bool Function(T previous, T value) where,
+  ) => Where(this, where);
+}
+```
+
+Used as `ref.watch(provider.where((previous, value) => value > 0))`.
+
+## Statically safe scoping (code-generation only)
+
+Through [riverpod_lint], Riverpod now includes a way to detect when scoping is used incorrectly.
+This lints detects when an override is missing, to avoid runtime errors.
+
+Consider:
+
+```dart
+// A typical "scoped provider"
+@Riverpod(dependencies: [])
+Future<int> myFutureProvider() => throw UnimplementedError();
+```
+
+To use this provider, you have two options.  
+If neither of the following options are used, the provider will throw an error at runtime.
+
+- Override the provider using `ProviderScope` before using it:
+  ```dart
+  class MyWidget extends StatelessWidget {
+    @override
+    Widget build(BuildContext context) {
+      return ProviderScope(
+        overrides: [
+          myFutureProvider.overrideWithValue(AsyncValue.data(42)),
+        ],
+        // A consumer is necessary to access the overridden provider
+        child: Consumer(
+          builder: (context, ref, child) {
+            // Use the provider
+            final value = ref.watch(myFutureProvider);
+            return Text(value.toString());
+          },
+        ),
+      );
+    }
+  }
+  ```
+- Specify `@Dependencies` on whatever uses the scoped provider to indicate that it 
+  depends on it.
+  ```dart
+  @Dependencies([myFuture])
+  class MyWidget extends ConsumerWidget {
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      // Use the provider
+      final value = ref.watch(myFutureProvider);
+      return Text(value.toString());
+    }
+  }
+  ```
+  After specifying `@Dependencies`, all usages of `MyWidget` will
+  require the same two options as above:
+  - Either override the provider using `ProviderScope` before using `MyWidget`
+    ```dart
+    void main() {
+      runApp(
+        ProviderScope(
+          overrides: [
+            myFutureProvider.overrideWithValue(AsyncValue.data(42)),
+          ],
+          child: MyWidget(),
+        ),
+      );
+    }
+    ```
+  - Or specify `@Dependencies` on whatever uses `MyWidget` to indicate that it depends on it.
+    ```dart
+    @Dependencies([myFuture])
+    class MyApp extends ConsumerWidget {
+      @override
+      Widget build(BuildContext context, WidgetRef ref) {
+         // MyApp indirectly uses scoped providers through MyWidget
+         return MyWidget();
+      }
+    }
+    ```
+
+## Other changes
+
+### AsyncValue
+
+[AsyncValue] received various changes.
+
+* It is now "sealed". This enables exhaustive pattern matching:
+  ```dart
+  AsyncValue<int> value;
+  switch (value) {
+    case AsyncData():
+      print('data');
+    case AsyncError():
+      print('error');
+    case AsyncLoading():
+      print('loading');
+    // No default case needed
+  }
+  ```
+* `valueOrNull` has been renamed to `value`.
+  The old `value` is removed, as its behavior related to errors
+  was odd.
+  To migrate, do a global search-and-replace of `valueOrNull` -> `value`.
+* `AsyncValue.isFromCache` has been added.  
+  This flag is set when a value is obtained through offline persistence.
+  It enables your UI to differentiate state coming from the database
+  and state from the server.
+* An optional `progress` property is available on `AsyncLoading`.
+  This enables your providers to define the current progress for a
+  request:
+  _[code snippet]_
+### All Ref listeners now return a way to remove the listener
+
+It is now possible to "unsubscribe" to the various life-cycles listeners:
+
+_[code snippet]_
+### Weak listeners - listen to a provider without preventing auto-dispose.
+
+When using `Ref.listen`, you can optionally specify `weak: true`:
+
+_[code snippet]_
+Specifying this flag will tell Riverpod that it can still dispose
+the listened provider if it stops being used.
+
+This flag is an advanced feature to help with some niche use-cases
+regarding combining multiple "sources of truth" in a single provider.
+
+[ProviderContainer]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderContainer-class.html
+[ProviderScope]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderScope-class.html
+[Mutation]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/Mutation-class.html
+[riverpod_lint]: https://pub.dev/packages/riverpod_lint
+[Ref]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Ref-class.html
+[Ref.read]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Ref/read.html
+[tsx.get]: https://pub.dev/documentation/riverpod/latest/experimental_mutation/MutationTransaction/get.html
+[WidgetRef]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/WidgetRef-class.html
+[TickerMode]: https://api.flutter.dev/flutter/widgets/TickerMode-class.html
+[Consumer]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Consumer-class.html
+[Notifier]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Notifier-class.html
+[AsyncValue]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/AsyncValue-class.html
+[ProviderObserver]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderObserver-class.html
+[WidgetTester.container]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/RiverpodWidgetTesterX/container.html
+[SyncProviderTransformerMixin]: https://pub.dev/documentation/riverpod/latest/misc/SyncProviderTransformerMixin-mixin.html
+[ProviderListenable]: https://pub.dev/documentation/riverpod/latest/misc/ProviderListenable-class.html
+[StreamProvider]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/StreamProvider-class.html
+[StreamNotifier]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/StreamNotifier-class.html
+[Ref.mounted]: https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/Ref/mounted.html
+
+---
